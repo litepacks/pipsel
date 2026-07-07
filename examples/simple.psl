@@ -1,0 +1,14 @@
+source_url: @url
+extracted_at: @timestamp
+
+title: "h1" | text | trim
+
+categories[]: ".category-card" {
+  name: "h2.cat-title" | text | trim
+  link: "a" | attr("href")
+
+  products[]: ".product-item" {
+    title: ".prod-name" | text | trim | fallback("Unknown")
+    price?: ".prod-price" | text | trim | float
+  }
+}

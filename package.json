@@ -1,0 +1,34 @@
+{
+  "name": "pipsel",
+  "version": "1.0.0",
+  "description": "TypeScript DSL for extracting structured data from HTML",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "pipsel": "./bin/pipsel.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup && mkdir -p docs && cp dist/browser.global.js docs/pipsel.global.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint:js": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "tsup": "^8.1.0",
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.10"
+  }
+}
