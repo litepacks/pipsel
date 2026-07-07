@@ -21,18 +21,36 @@ function formatProgram(program: Program): string {
 }
 
 function formatScope(definitions: Definition[], indentLevel: number): string {
-  const indent = " ".repeat(indentLevel * 2);
-  const formattedDefs = definitions.map((def) => {
-    if (def.type === "FieldDefinition") {
-      return formatField(def, indent);
-    } else if (def.type === "ListDefinition") {
-      return formatList(def, indentLevel);
-    } else {
-      return formatMeta(def, indent);
-    }
-  });
+  const formattedParts: string[] = [];
 
-  return formattedDefs.join("\n");
+  for (let i = 0; i < definitions.length; i++) {
+    const current = definitions[i];
+    let formatted = "";
+
+    if (current.type === "FieldDefinition") {
+      formatted = formatField(current, " ".repeat(indentLevel * 2));
+    } else if (current.type === "ListDefinition") {
+      formatted = formatList(current, indentLevel);
+    } else {
+      formatted = formatMeta(current, " ".repeat(indentLevel * 2));
+    }
+
+    if (i > 0) {
+      const prev = definitions[i - 1];
+      const shouldSeparate =
+        prev.type === "ListDefinition" ||
+        current.type === "ListDefinition" ||
+        prev.type !== current.type;
+
+      if (shouldSeparate) {
+        formattedParts.push("");
+      }
+    }
+
+    formattedParts.push(formatted);
+  }
+
+  return formattedParts.join("\n");
 }
 
 function formatSourceNode(source: SourceNode): string {

@@ -473,11 +473,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Bind format button
   document.getElementById("format-btn").addEventListener("click", () => {
     try {
       const formatted = window.Pipsel.format(pslTextarea.value);
       pslTextarea.value = formatted;
+      updateBackdropHighlighting();
       evaluatePlayground();
       // Sync scroll after formatting
       pslHighlightPre.scrollTop = pslTextarea.scrollTop;

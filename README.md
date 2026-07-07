@@ -135,6 +135,38 @@ Diagnoses any issues in the `.psl` script (exits with non-zero code on errors).
 pipsel lint rules.psl
 ```
 
+## EBNF Grammar Specification
+
+For developers interested in writing parsers or compilers for Pipsel in other programming languages (Python, Go, Rust, etc.), here is the formal EBNF (Extended Backus-Naur Form) specification for the Pipsel DSL:
+
+```ebnf
+Program         = { Definition } ;
+
+Definition      = Identifier ( ":" | "?:" ) SourceNode { Pipe }
+                | Identifier "[]:" SourceNode "{" { Definition } "}" ;
+
+SourceNode      = StringLiteral
+                | "@" Identifier
+                | "." | ".." | "$"
+                | "self" | "parent" | "root" ;
+
+Pipe            = "|" Identifier [ "(" [ Literal { "," Literal } ] ")" ] ;
+
+Literal         = StringLiteral | NumberLiteral | BooleanLiteral ;
+
+StringLiteral   = '"' { AllCharactersExceptQuote } '"' 
+                | "'" { AllCharactersExceptApostrophe } "'" ;
+
+NumberLiteral   = [ "-" | "+" ] { DecimalDigit } [ "." { DecimalDigit } ] ;
+
+BooleanLiteral  = "true" | "false" ;
+
+Identifier      = Letter { Letter | DecimalDigit | "_" } ;
+
+Letter          = "a" | ... | "z" | "A" | ... | "Z" ;
+DecimalDigit    = "0" | ... | "9" ;
+```
+
 ---
 
 ## Development

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pipsel DSL — Structured HTML Data Extractor</title>
+  <title>Pipsel — Structured HTML Data Extractor</title>
   
   <!-- Modern Typography and Stylesheets -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,7 +24,7 @@
   <!-- Glassmorphic Header -->
   <header>
     <div class="logo">
-      <span>⚡ Pipsel DSL</span>
+      <span>⚡ Pipsel</span>
     </div>
     <div class="nav-links">
       <a href="#about">About</a>
@@ -84,7 +84,7 @@
             </div>
             <div class="textarea-container editor-interactive">
               <pre class="highlight-overlay"><code id="psl-highlight" class="language-psl"></code></pre>
-              <textarea id="psl-input" autocomplete="off" spellcheck="false" placeholder="Write PSL code..."></textarea>
+              <textarea id="psl-input" autocomplete="off" spellcheck="false" wrap="off" placeholder="Write PSL code..."></textarea>
             </div>
           </div>
 
@@ -95,7 +95,7 @@
             </div>
             <div class="textarea-container editor-interactive">
               <pre class="highlight-overlay"><code id="html-highlight" class="language-xml"></code></pre>
-              <textarea id="html-input" autocomplete="off" spellcheck="false" placeholder="Paste HTML content..."></textarea>
+              <textarea id="html-input" autocomplete="off" spellcheck="false" wrap="off" placeholder="Paste HTML content..."></textarea>
             </div>
           </div>
         </div>
@@ -132,6 +132,7 @@
             <li><a href="#doc-pipes">3. Pipe Functions</a></li>
             <li><a href="#doc-api">4. Programmatic API</a></li>
             <li><a href="#doc-cli">5. CLI Interface</a></li>
+            <li><a href="#doc-ebnf">6. EBNF Grammar</a></li>
           </ul>
         </nav>
 
@@ -278,6 +279,36 @@ pipsel fmt rules.psl
 
 # Lint diagnostic checks (exits with non-zero on error)
 pipsel lint rules.psl</code></pre>
+          </div>
+
+          <div class="docs-block" id="doc-ebnf">
+            <h3>6. EBNF Grammar Specification</h3>
+            <p>For writing parsers or compilers for Pipsel in other programming languages (such as Python, Go, or Rust), the formal EBNF (Extended Backus-Naur Form) specification for the DSL syntax is provided below:</p>
+            <pre><code class="language-ebnf">Program         = { Definition } ;
+
+Definition      = Identifier ( ":" | "?:" ) SourceNode { Pipe }
+                | Identifier "[]:" SourceNode "{" { Definition } "}" ;
+
+SourceNode      = StringLiteral
+                | "@" Identifier
+                | "." | ".." | "$"
+                | "self" | "parent" | "root" ;
+
+Pipe            = "|" Identifier [ "(" [ Literal { "," Literal } ] ")" ] ;
+
+Literal         = StringLiteral | NumberLiteral | BooleanLiteral ;
+
+StringLiteral   = '"' { AllCharactersExceptQuote } '"' 
+                | "'" { AllCharactersExceptApostrophe } "'" ;
+
+NumberLiteral   = [ "-" | "+" ] { DecimalDigit } [ "." { DecimalDigit } ] ;
+
+BooleanLiteral  = "true" | "false" ;
+
+Identifier      = Letter { Letter | DecimalDigit | "_" } ;
+
+Letter          = "a" | ... | "z" | "A" | ... | "Z" ;
+DecimalDigit    = "0" | ... | "9" ;</code></pre>
           </div>
 
         </div>

@@ -130,7 +130,9 @@ describe("Pipsel DSL Formatter", () => {
 
     const expected = [
       'url: @url',
+      '',
       'title: "h1" | text | trim',
+      '',
       'items[]: ".card" {',
       '  name: "h2" | text',
       '  price?: ".price" | text | float',
@@ -489,7 +491,14 @@ b: parent
 c: root
 d: @url
 `;
-    expect(format(formatInput).trim()).toBe(formatInput.trim());
+    const formatExpected = `
+a: self
+b: parent
+c: root
+
+d: @url
+`.trim();
+    expect(format(formatInput).trim()).toBe(formatExpected);
 
     // Context execution & traversal pipes tests
     const htmlSnippet = `
