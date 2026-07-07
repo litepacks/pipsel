@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pipsel — Structured HTML Data Extractor</title>
   
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-CVC4GFKTN6');
+  </script>
+  
   <!-- Modern Typography and Stylesheets -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -132,7 +141,6 @@
             <li><a href="#doc-pipes">3. Pipe Functions</a></li>
             <li><a href="#doc-api">4. Programmatic API</a></li>
             <li><a href="#doc-cli">5. CLI Interface</a></li>
-            <li><a href="#doc-ebnf">6. EBNF Grammar</a></li>
           </ul>
         </nav>
 
@@ -281,35 +289,7 @@ pipsel fmt rules.psl
 pipsel lint rules.psl</code></pre>
           </div>
 
-          <div class="docs-block" id="doc-ebnf">
-            <h3>6. EBNF Grammar Specification</h3>
-            <p>For writing parsers or compilers for Pipsel in other programming languages (such as Python, Go, or Rust), the formal EBNF (Extended Backus-Naur Form) specification for the DSL syntax is provided below:</p>
-            <pre><code class="language-ebnf">Program         = { Definition } ;
 
-Definition      = Identifier ( ":" | "?:" ) SourceNode { Pipe }
-                | Identifier "[]:" SourceNode "{" { Definition } "}" ;
-
-SourceNode      = StringLiteral
-                | "@" Identifier
-                | "." | ".." | "$"
-                | "self" | "parent" | "root" ;
-
-Pipe            = "|" Identifier [ "(" [ Literal { "," Literal } ] ")" ] ;
-
-Literal         = StringLiteral | NumberLiteral | BooleanLiteral ;
-
-StringLiteral   = '"' { AllCharactersExceptQuote } '"' 
-                | "'" { AllCharactersExceptApostrophe } "'" ;
-
-NumberLiteral   = [ "-" | "+" ] { DecimalDigit } [ "." { DecimalDigit } ] ;
-
-BooleanLiteral  = "true" | "false" ;
-
-Identifier      = Letter { Letter | DecimalDigit | "_" } ;
-
-Letter          = "a" | ... | "z" | "A" | ... | "Z" ;
-DecimalDigit    = "0" | ... | "9" ;</code></pre>
-          </div>
 
         </div>
       </div>
