@@ -189,7 +189,14 @@ function evaluateField(def, scope, context) {
   const elements = sourceVal; // Element[]
   if (elements.length === 0) {
     const fallbackPipe = def.pipes.find(p => p.name === 'fallback');
-    return fallbackPipe && fallbackPipe.args.length > 0 ? fallbackPipe.args[0].value : null;
+    if (fallbackPipe && fallbackPipe.args.length > 0) {
+      return fallbackPipe.args[0].value;
+    }
+    const hasBoolPipe = def.pipes.some(p => p.name === 'bool' || p.name === 'boolean');
+    if (hasBoolPipe) {
+      return false;
+    }
+    return null;
   }
 
   let value = elements;
@@ -227,10 +234,35 @@ function evaluateList(def, scope, context) {
   const elements = sourceVal; // Element[]
   const listResult = [];
 
-  elements.forEach(el => {
-    const itemResult = evaluateScope(def.body, el, context);
-    listResult.push(itemResult);
-  });
+  if (def.body) {
+    elements.forEach(el => {
+      const itemResult = evaluateScope(def.body, el, context);
+      listResult.push(itemResult);
+    });
+  } else if (def.pipes && def.pipes.length > 0) {
+    elements.forEach(el => {
+      let val = [el];
+      let isSelection = true;
+      for (let i = 0; i < def.pipes.length; i++) {
+        const pipe = def.pipes[i];
+        val = evaluatePipe(pipe, val, isSelection, context);
+        const isTraversal = ["find", "closest", "parent", "children", "siblings", "next", "prev", "eq", "first", "last"].includes(pipe.name);
+        const isExtractor = ["text", "html", "attr"].includes(pipe.name);
+        if (isTraversal) {
+          isSelection = true;
+        } else if (isExtractor) {
+          isSelection = false;
+        } else {
+          isSelection = false;
+        }
+      }
+      listResult.push(val);
+    });
+  } else {
+    elements.forEach(el => {
+      listResult.push(el.textContent ? el.textContent.trim() : "");
+    });
+  }
 
   return listResult;
 }
@@ -350,12 +382,58 @@ function evaluateTransformer(pipe, val) {
     if (pipe.name === "fallback") {
       return pipe.args[0].value;
     }
+    if (pipe.name === "bool" || pipe.name === "boolean") {
+      return false;
+    }
     return null;
   }
 
   switch (pipe.name) {
     case "trim":
       return typeof val === "string" ? val.trim() : val;
+    case "trim_start":
+    case "trimStart":
+      return typeof val === "string" ? val.trimStart() : String(val).trimStart();
+    case "trim_end":
+    case "trimEnd":
+      return typeof val === "string" ? val.trimEnd() : String(val).trimEnd();
+    case "lowercase":
+    case "lower":
+      return typeof val === "string" ? val.toLowerCase() : String(val).toLowerCase();
+    case "uppercase":
+    case "upper":
+      return typeof val === "string" ? val.toUpperCase() : String(val).toUpperCase();
+    case "titlecase":
+    case "title": {
+      const s = typeof val === "string" ? val : String(val);
+      return s.replace(/\b\w/g, c => c.toUpperCase());
+    }
+    case "slugify": {
+      const s = typeof val === "string" ? val : String(val);
+      return s
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+    }
+    case "clean": {
+      const s = typeof val === "string" ? val : String(val);
+      return s.replace(/\s+/g, " ").trim();
+    }
+    case "prefix": {
+      const prefixStr = pipe.args[0]?.value || "";
+      return prefixStr + String(val);
+    }
+    case "suffix": {
+      const suffixStr = pipe.args[0]?.value || "";
+      return String(val) + suffixStr;
+    }
+    case "substring":
+    case "slice": {
+      const s = typeof val === "string" ? val : String(val);
+      const start = pipe.args[0]?.value;
+      const end = pipe.args[1]?.value;
+      return s.slice(start, end);
+    }
     case "replace": {
       if (typeof val !== "string") return val;
       const from = pipe.args[0]?.value;
@@ -387,6 +465,82 @@ function evaluateTransformer(pipe, val) {
     case "float": {
       const parsed = parseFloat(String(val).replace(/[^0-9.-]/g, ""));
       return isNaN(parsed) ? null : parsed;
+    }
+    case "abs": {
+      const n = Number(val);
+      return isNaN(n) ? null : Math.abs(n);
+    }
+    case "round": {
+      const n = Number(val);
+      if (isNaN(n)) return null;
+      const decimals = pipe.args[0]?.value || 0;
+      return Number(n.toFixed(decimals));
+    }
+    case "ceil": {
+      const n = Number(val);
+      return isNaN(n) ? null : Math.ceil(n);
+    }
+    case "floor": {
+      const n = Number(val);
+      return isNaN(n) ? null : Math.floor(n);
+    }
+    case "add": {
+      const n = Number(val);
+      if (isNaN(n)) return null;
+      const addend = Number(pipe.args[0]?.value || 0);
+      return n + addend;
+    }
+    case "subtract": {
+      const n = Number(val);
+      if (isNaN(n)) return null;
+      const subtrahend = Number(pipe.args[0]?.value || 0);
+      return n - subtrahend;
+    }
+    case "multiply": {
+      const n = Number(val);
+      if (isNaN(n)) return null;
+      const factor = Number(pipe.args[0]?.value || 1);
+      return n * factor;
+    }
+    case "divide": {
+      const n = Number(val);
+      if (isNaN(n)) return null;
+      const divisor = Number(pipe.args[0]?.value || 1);
+      return divisor === 0 ? null : n / divisor;
+    }
+    case "min": {
+      const arr = Array.isArray(val) ? val : [val];
+      const nums = arr.map(Number).filter(n => !isNaN(n));
+      return nums.length === 0 ? null : Math.min(...nums);
+    }
+    case "max": {
+      const arr = Array.isArray(val) ? val : [val];
+      const nums = arr.map(Number).filter(n => !isNaN(n));
+      return nums.length === 0 ? null : Math.max(...nums);
+    }
+    case "sum": {
+      const arr = Array.isArray(val) ? val : [val];
+      const nums = arr.map(Number).filter(n => !isNaN(n));
+      return nums.reduce((acc, curr) => acc + curr, 0);
+    }
+    case "avg":
+    case "average": {
+      const arr = Array.isArray(val) ? val : [val];
+      const nums = arr.map(Number).filter(n => !isNaN(n));
+      return nums.length === 0 ? null : nums.reduce((acc, curr) => acc + curr, 0) / nums.length;
+    }
+    case "bool":
+    case "boolean": {
+      if (typeof val === "boolean") return val;
+      if (typeof val === "number") return !isNaN(val) && val !== 0;
+      if (typeof val === "string") {
+        const s = val.trim().toLowerCase();
+        if (s === "false" || s === "no" || s === "0" || s === "off" || s === "") return false;
+        if (s === "true" || s === "yes" || s === "1" || s === "on") return true;
+        return s.length > 0;
+      }
+      if (Array.isArray(val)) return val.length > 0;
+      return !!val;
     }
     case "fallback":
       return val === "" ? pipe.args[0].value : val;
