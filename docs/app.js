@@ -4,7 +4,7 @@ hljs.registerLanguage("psl", function(hljs) {
     name: "Pipsel",
     aliases: ["psl"],
     keywords: {
-      keyword: "text html attr trim replace regex split int float fallback filter",
+      keyword: "text html attr trim trim_start trimStart trim_end trimEnd lowercase lower uppercase upper titlecase title slugify clean prefix suffix substring slice replace regex split int float abs round ceil floor add subtract multiply divide min max sum avg average bool boolean fallback filter",
       literal: "true false null"
     },
     contains: [
@@ -48,6 +48,10 @@ const defaultPsl = `source_url: @url
 extracted_at: @timestamp
 
 title: ".hnname a" | text | trim
+
+# Primitive lists (flat arrays of strings/numbers/booleans)
+ranks[]: ".rank" | text | trim | int
+domains[]: ".sitestr" | text | trim
 
 stories[]: ".athing" {
   rank: ".rank" | text | trim
