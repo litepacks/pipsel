@@ -1,6 +1,6 @@
 {
   "name": "pipsel",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "TypeScript DSL for extracting structured data from HTML",
   "type": "module",
   "main": "./dist/index.js",
