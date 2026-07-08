@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pipsel — Structured HTML Data Extractor</title>
   
   <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-CVC4GFKTN6"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
@@ -20,7 +20,31 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   
   <!-- Highlight.js Theme -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <link class="hljs-style-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  
+  <!-- Tailwind CSS v4 browser runtime -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  
+  <style type="text/tailwindcss">
+    @theme {
+      --color-brand-bg: #0d0f14;
+      --color-brand-card: #141822;
+      --color-brand-border: #21283b;
+      --color-brand-primary: #9d4edd;
+      --color-brand-primary-hover: #b5179e;
+      --color-brand-primary-glow: rgba(157, 78, 221, 0.25);
+      --color-brand-accent: #4cc9f0;
+      --color-brand-accent-glow: rgba(76, 201, 240, 0.15);
+      --color-brand-text: #f8f9fa;
+      --color-brand-muted: #9ba1b0;
+      --color-brand-success: #38b000;
+      --color-brand-error: #e63946;
+      --color-brand-warning: #ffb703;
+
+      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+  </style>
   
   <!-- Custom Stylesheet -->
   <link rel="stylesheet" href="style.css">
@@ -28,84 +52,101 @@
   <!-- Loaded Pipsel Global Library Bundle -->
   <script src="pipsel.global.js"></script>
 </head>
-<body>
+<body class="bg-brand-bg text-brand-text font-sans antialiased pb-20 overflow-x-hidden min-h-screen">
 
   <!-- Glassmorphic Header -->
-  <header>
-    <div class="logo">
+  <header class="sticky top-0 z-50 flex flex-col sm:flex-row justify-between items-center px-6 md:px-12 py-4 bg-brand-bg/70 backdrop-blur-md border-b border-brand-border gap-4 text-center sm:text-left">
+    <div class="flex items-center gap-2 text-2xl font-extrabold tracking-tight bg-gradient-to-r from-brand-primary to-brand-accent bg-clip-text text-transparent select-none">
       <span>⚡ Pipsel</span>
     </div>
-    <div class="nav-links">
-      <a href="#about">About</a>
-      <a href="#playground">Playground</a>
-      <a href="#docs">Documentation</a>
-      <a href="https://github.com/litepacks/pipsel" target="_blank" rel="noopener noreferrer" class="github-link">
+    <div class="flex flex-wrap items-center justify-center sm:justify-end gap-x-3 sm:gap-x-5 gap-y-2 text-xs sm:text-sm md:text-base">
+      <a href="#about" class="text-brand-muted hover:text-brand-text font-semibold transition-colors duration-200">About</a>
+      <a href="#playground" class="text-brand-muted hover:text-brand-text font-semibold transition-colors duration-200">Playground</a>
+      <a href="#docs" class="text-brand-muted hover:text-brand-text font-semibold transition-colors duration-200">Documentation</a>
+      <a href="https://github.com/litepacks/pipsel" target="_blank" rel="noopener noreferrer" class="github-link text-brand-muted hover:text-brand-text font-semibold transition-colors duration-200">
         <svg height="18" viewBox="0 0 16 16" width="18" style="fill: currentColor; display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.35 2.69.91 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8z"></path></svg>GitHub
       </a>
-      <button class="btn-primary" onclick="document.getElementById('playground').scrollIntoView({ behavior: 'smooth' })">Try Playground</button>
+      <button class="bg-gradient-to-r from-brand-primary to-brand-primary-hover hover:from-brand-primary-hover hover:to-brand-primary text-white border-0 px-4 py-2 rounded-lg font-semibold transition-all duration-200 shadow-md shadow-brand-primary/10 hover:shadow-lg hover:shadow-brand-primary/20 text-xs md:text-sm cursor-pointer" onclick="document.getElementById('playground').scrollIntoView({ behavior: 'smooth' })">Try Playground</button>
     </div>
   </header>
 
-  <div class="container">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 box-border">
     
     <!-- Hero Section -->
-    <section class="hero" id="about">
-      <h1>Extract Structured HTML Data <br>using <span>Unix-style Pipes</span></h1>
-      <p>Pipsel is a Node.js and TypeScript compiler toolchain for a custom HTML parsing DSL. Write declarative, hierarchical extraction selectors, parse, format, and lint them programmatically or in the CLI.</p>
+    <section class="flex flex-col items-center text-center pt-16 md:pt-24 pb-10 md:pb-16 gap-5" id="about">
+      <h1 class="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-tight sm:leading-none">
+        Extract Structured HTML Data <br class="hidden sm:inline">using <span class="bg-gradient-to-r from-brand-primary to-brand-accent bg-clip-text text-transparent">Unix-style Pipes</span>
+      </h1>
+      <p class="text-base sm:text-lg text-brand-muted max-w-2xl mt-2 leading-relaxed">
+        Pipsel is a Node.js and TypeScript compiler toolchain for a custom HTML parsing DSL. Write declarative, hierarchical extraction selectors, parse, format, and lint them programmatically or in the CLI.
+      </p>
       
-      <div class="install-box">
+      <div class="flex items-center justify-between gap-4 bg-brand-card/80 border border-brand-border rounded-xl px-5 py-3.5 font-mono text-sm sm:text-base text-brand-accent max-w-md w-full mt-6 backdrop-blur-sm shadow-lg shadow-black/30">
         <span>$ npm install pipsel</span>
-        <button id="copy-install-btn" title="Copy install command">📋</button>
+        <button id="copy-install-btn" title="Copy install command" class="text-brand-muted hover:text-brand-text transition-colors duration-200 bg-transparent border-0 cursor-pointer text-lg">📋</button>
       </div>
     </section>
 
     <!-- Highlighted Feature Cards -->
-    <section class="features-grid">
-      <div class="feature-card">
-        <h3><span class="feature-icon">⛓️</span> Unix Pipe Transformers</h3>
-        <p>Chain element content converters like <code>text</code>, <code>html</code>, and <code>attr</code> into value manipulators like <code>trim</code>, <code>regex</code>, <code>split</code>, and <code>float</code> using standard <code>|</code> pipe indicators.</p>
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 my-10 md:my-16">
+      <div class="bg-brand-card border border-brand-border p-6 rounded-2xl shadow-md transition-all duration-300 hover:border-brand-primary/40 hover:shadow-lg hover:shadow-brand-primary/5">
+        <h3 class="text-lg font-bold text-brand-text mb-2.5 flex items-center gap-2">
+          <span class="text-xl">⛓️</span> Unix Pipe Transformers
+        </h3>
+        <p class="text-brand-muted text-sm leading-relaxed">
+          Chain element content converters like <code>text</code>, <code>html</code>, and <code>attr</code> into value manipulators like <code>trim</code>, <code>regex</code>, <code>split</code>, and <code>float</code> using standard <code>|</code> pipe indicators.
+        </p>
       </div>
-      <div class="feature-card">
-        <h3><span class="feature-icon">🔍</span> Native Scoping / Nesting</h3>
-        <p>Supports list blocks (with brackets <code>[]</code>) and nested child objects. Scopes evaluation relative to matched CSS selectors for robust structure scraping.</p>
+      <div class="bg-brand-card border border-brand-border p-6 rounded-2xl shadow-md transition-all duration-300 hover:border-brand-primary/40 hover:shadow-lg hover:shadow-brand-primary/5">
+        <h3 class="text-lg font-bold text-brand-text mb-2.5 flex items-center gap-2">
+          <span class="text-xl">🔍</span> Native Scoping / Nesting
+        </h3>
+        <p class="text-brand-muted text-sm leading-relaxed">
+          Supports list blocks (with brackets <code>[]</code>) and nested child objects. Scopes evaluation relative to matched CSS selectors for robust structure scraping.
+        </p>
       </div>
-      <div class="feature-card">
-        <h3><span class="feature-icon">🛠️</span> Robust Linting & AST</h3>
-        <p>Catches duplicate keys, wrong arguments, unknown pipes, empty selectors, and invalid pipe order. Exposes a clean compiler API and CLI interface.</p>
+      <div class="bg-brand-card border border-brand-border p-6 rounded-2xl shadow-md transition-all duration-300 hover:border-brand-primary/40 hover:shadow-lg hover:shadow-brand-primary/5">
+        <h3 class="text-lg font-bold text-brand-text mb-2.5 flex items-center gap-2">
+          <span class="text-xl">🛠️</span> Robust Linting & AST
+        </h3>
+        <p class="text-brand-muted text-sm leading-relaxed">
+          Catches duplicate keys, wrong arguments, unknown pipes, empty selectors, and invalid pipe order. Exposes a clean compiler API and CLI interface.
+        </p>
       </div>
     </section>
 
     <!-- Interactive Live Playground -->
-    <section class="playground-section" id="playground">
-      <div class="playground-title">
-        <h2>Live Scraper Playground</h2>
-        <p>Write rules in the custom PSL editor on the left and see linting, AST structure, and browser-executed evaluation on the right!</p>
+    <section class="my-10 md:my-16 border border-brand-border rounded-2xl bg-brand-card p-4 sm:p-8 shadow-xl shadow-black/20" id="playground">
+      <div class="text-center sm:text-left mb-6">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-brand-text">Live Scraper Playground</h2>
+        <p class="text-brand-muted text-sm sm:text-base mt-1">Write rules in the custom PSL editor on the left and see linting, AST structure, and browser-executed evaluation on the right!</p>
       </div>
 
-      <div class="playground-grid">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-full box-border">
         
         <!-- Left Input Column -->
-        <div class="editor-column">
+        <div class="flex flex-col gap-6 w-full max-w-full box-border min-w-0">
+          
           <!-- PSL Rules Editor -->
-          <div class="editor-panel">
-            <div class="panel-header">
+          <div class="flex flex-col border border-brand-border rounded-xl bg-[#090b0f] overflow-hidden h-[320px] max-w-full box-border min-w-0">
+            <div class="flex justify-between items-center px-4 py-2.5 bg-brand-card border-b border-brand-border text-xs sm:text-sm font-semibold text-brand-muted">
               <span>PSL Extraction Rules (.psl)</span>
-              <div class="panel-header-actions">
-                <button class="panel-btn" id="format-btn">✨ Format Code</button>
+              <div>
+                <button class="text-xs px-2.5 py-1.5 rounded bg-brand-border text-brand-text hover:bg-brand-primary/20 hover:text-brand-primary border-0 font-semibold transition-all duration-200 cursor-pointer" id="format-btn">✨ Format Code</button>
               </div>
             </div>
-            <div class="textarea-container editor-interactive">
+            <div class="textarea-container editor-interactive flex-1 w-full min-h-0">
               <pre class="highlight-overlay"><code id="psl-highlight" class="language-psl"></code></pre>
               <textarea id="psl-input" autocomplete="off" spellcheck="false" wrap="off" placeholder="Write PSL code..."></textarea>
             </div>
           </div>
 
           <!-- HTML Source Input -->
-          <div class="editor-panel">
-            <div class="panel-header">
+          <div class="flex flex-col border border-brand-border rounded-xl bg-[#090b0f] overflow-hidden h-[320px] max-w-full box-border min-w-0">
+            <div class="flex justify-between items-center px-4 py-2.5 bg-brand-card border-b border-brand-border text-xs sm:text-sm font-semibold text-brand-muted">
               <span>HTML Source Document</span>
             </div>
-            <div class="textarea-container editor-interactive">
+            <div class="textarea-container editor-interactive flex-1 w-full min-h-0">
               <pre class="highlight-overlay"><code id="html-highlight" class="language-xml"></code></pre>
               <textarea id="html-input" autocomplete="off" spellcheck="false" wrap="off" placeholder="Paste HTML content..."></textarea>
             </div>
@@ -113,16 +154,16 @@
         </div>
 
         <!-- Right Output Column -->
-        <div class="output-column">
-          <div class="tabs-header">
-            <button class="tab-btn active" data-tab="json">📋 Live Scraped Output (JSON)</button>
-            <button class="tab-btn" data-tab="ast">🌳 Parsed AST</button>
-            <button class="tab-btn" data-tab="lint">
+        <div class="flex flex-col border border-brand-border rounded-xl bg-[#090b0f] overflow-hidden h-[420px] lg:h-[664px] min-w-0 w-full max-w-full box-border">
+          <div class="flex bg-brand-card border-b border-brand-border text-xs sm:text-sm overflow-x-auto scrollbar-none">
+            <button class="tab-btn flex-1 py-3 px-4 text-center bg-transparent border-b-2 border-transparent text-brand-muted font-semibold hover:text-brand-text transition-all duration-200 whitespace-nowrap cursor-pointer active" data-tab="json">📋 Live Scraped Output (JSON)</button>
+            <button class="tab-btn flex-1 py-3 px-4 text-center bg-transparent border-b-2 border-transparent text-brand-muted font-semibold hover:text-brand-text transition-all duration-200 whitespace-nowrap cursor-pointer" data-tab="ast">🌳 Parsed AST</button>
+            <button class="tab-btn flex-1 py-3 px-4 text-center bg-transparent border-b-2 border-transparent text-brand-muted font-semibold hover:text-brand-text transition-all duration-200 whitespace-nowrap cursor-pointer" data-tab="lint">
               ⚠️ Lint Issues 
-              <span id="error-badge" class="tab-badge hidden">0</span>
+              <span id="error-badge" class="ml-1.5 px-2 py-0.5 text-xs font-extrabold rounded-full bg-brand-error text-white hidden">0</span>
             </button>
           </div>
-          <div class="output-container">
+          <div class="output-container flex-1 overflow-auto p-4 w-full min-h-0">
             <pre><code id="output-code" class="language-json"></code></pre>
           </div>
         </div>
@@ -131,142 +172,146 @@
     </section>
 
     <!-- Reference Documentation Section -->
-    <section class="docs-section" id="docs">
-      <h2>Documentation Reference</h2>
+    <section class="my-14 md:my-20 border-t border-brand-border pt-12" id="docs">
+      <h2 class="text-2xl sm:text-4xl font-extrabold text-brand-text mb-8 text-center sm:text-left">Documentation Reference</h2>
       
-      <div class="docs-grid">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
         
         <!-- Navigation Menu -->
-        <nav class="docs-nav">
-          <ul>
-            <li><a href="#doc-installation">1. Installation</a></li>
-            <li><a href="#doc-syntax">2. DSL Syntax Guide</a></li>
-            <li><a href="#doc-pipes">3. Pipe Functions</a></li>
-            <li><a href="#doc-api">4. Programmatic API</a></li>
-            <li><a href="#doc-cli">5. CLI Interface</a></li>
+        <nav class="md:col-span-1 md:sticky md:top-24 h-fit bg-brand-card border border-brand-border rounded-xl p-2 w-full">
+          <ul class="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible p-1 md:p-0 scrollbar-none">
+            <li class="shrink-0 md:shrink"><a href="#doc-installation" class="block px-3 py-2 text-xs md:text-sm font-semibold text-brand-muted hover:text-brand-text hover:bg-brand-border/50 rounded-md transition-all duration-200 border-l-2 border-transparent hover:border-brand-primary">1. Installation</a></li>
+            <li class="shrink-0 md:shrink"><a href="#doc-syntax" class="block px-3 py-2 text-xs md:text-sm font-semibold text-brand-muted hover:text-brand-text hover:bg-brand-border/50 rounded-md transition-all duration-200 border-l-2 border-transparent hover:border-brand-primary">2. DSL Syntax Guide</a></li>
+            <li class="shrink-0 md:shrink"><a href="#doc-pipes" class="block px-3 py-2 text-xs md:text-sm font-semibold text-brand-muted hover:text-brand-text hover:bg-brand-border/50 rounded-md transition-all duration-200 border-l-2 border-transparent hover:border-brand-primary">3. Pipe Functions</a></li>
+            <li class="shrink-0 md:shrink"><a href="#doc-api" class="block px-3 py-2 text-xs md:text-sm font-semibold text-brand-muted hover:text-brand-text hover:bg-brand-border/50 rounded-md transition-all duration-200 border-l-2 border-transparent hover:border-brand-primary">4. Programmatic API</a></li>
+            <li class="shrink-0 md:shrink"><a href="#doc-cli" class="block px-3 py-2 text-xs md:text-sm font-semibold text-brand-muted hover:text-brand-text hover:bg-brand-border/50 rounded-md transition-all duration-200 border-l-2 border-transparent hover:border-brand-primary">5. CLI Interface</a></li>
           </ul>
         </nav>
 
         <!-- Main Documentation Content -->
-        <div class="docs-content">
+        <div class="md:col-span-3 flex flex-col gap-10 min-w-0">
           
-          <div class="docs-block" id="doc-installation">
-            <h3>1. Installation</h3>
-            <p>Install Pipsel using your favorite package manager. It targets Node.js 20+ environments and exports standard TypeScript compiler declarations.</p>
-            <pre><code class="language-bash">npm install pipsel</code></pre>
+          <div class="p-6 bg-brand-card border border-brand-border rounded-xl shadow-md min-w-0" id="doc-installation">
+            <h3 class="text-xl font-bold text-brand-text mb-4 border-b border-brand-border pb-2">1. Installation</h3>
+            <p class="text-brand-muted text-sm sm:text-base leading-relaxed mb-4">Install Pipsel using your favorite package manager. It targets Node.js 20+ environments and exports standard TypeScript compiler declarations.</p>
+            <pre class="bg-[#090b0f] border border-brand-border rounded-lg p-4 max-w-full overflow-x-auto box-border"><code class="language-bash font-mono text-xs sm:text-sm leading-relaxed">npm install pipsel</code></pre>
           </div>
 
-          <div class="docs-block" id="doc-syntax">
-            <h3>2. DSL Syntax Guide</h3>
-            <p>Pipsel's domain syntax is JSON-like but structured specifically for DOM crawling. Definitions map properties to target selector rules.</p>
-            <table class="ref-table">
-              <thead>
-                <tr>
-                  <th>Syntax Type</th>
-                  <th>Example Snippet</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>Simple Field</strong></td>
-                  <td><code>title: "h1" &#124; text</code></td>
-                  <td>Extracts value from selector and applies converters.</td>
-                </tr>
-                <tr>
-                  <td><strong>Optional Field</strong></td>
-                  <td><code>price?: ".price" &#124; text</code></td>
-                  <td>If selector is missing, returns <code>null</code> rather than raising warnings.</td>
-                </tr>
-                <tr>
-                  <td><strong>List Block</strong></td>
-                  <td><code>items[]: ".item" { name: "h3" &#124; text }</code></td>
-                  <td>Iterates over selector array. Scopes children context to each item.</td>
-                </tr>
-                <tr>
-                  <td><strong>Meta Variables</strong></td>
-                  <td><code>source: @url</code></td>
-                  <td>Injects run parameters (<code>@url</code>, <code>@timestamp</code>). No selector needed.</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="p-6 bg-brand-card border border-brand-border rounded-xl shadow-md min-w-0" id="doc-syntax">
+            <h3 class="text-xl font-bold text-brand-text mb-4 border-b border-brand-border pb-2">2. DSL Syntax Guide</h3>
+            <p class="text-brand-muted text-sm sm:text-base leading-relaxed mb-4">Pipsel's domain syntax is JSON-like but structured specifically for DOM crawling. Definitions map properties to target selector rules.</p>
+            <div class="max-w-full overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs sm:text-sm rounded-lg overflow-hidden border border-brand-border">
+                <thead>
+                  <tr class="bg-[#090b0f] border-b border-brand-border">
+                    <th class="px-4 py-3 text-brand-text font-bold">Syntax Type</th>
+                    <th class="px-4 py-3 text-brand-text font-bold">Example Snippet</th>
+                    <th class="px-4 py-3 text-brand-text font-bold">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-brand-border/40">
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold">Simple Field</td>
+                    <td class="px-4 py-3"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">title: "h1" &#124; text</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Extracts value from selector and applies converters.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold">Optional Field</td>
+                    <td class="px-4 py-3"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">price?: ".price" &#124; text</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">If selector is missing, returns <code>null</code> rather than raising warnings.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold">List Block</td>
+                    <td class="px-4 py-3"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">items[]: ".item" { name: "h3" &#124; text }</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Iterates over selector array. Scopes children context to each item.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold">Meta Variables</td>
+                    <td class="px-4 py-3"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">source: @url</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Injects run parameters (<code>@url</code>, <code>@timestamp</code>). No selector needed.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div class="docs-block" id="doc-pipes">
-            <h3>3. Built-in Pipe Functions</h3>
-            <p>The parser validates pipe names and parameter counts. The pipes execute in order from left to right.</p>
-            <table class="ref-table">
-              <thead>
-                <tr>
-                  <th>Pipe Name</th>
-                  <th>Arguments</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>text</code></td>
-                  <td>None</td>
-                  <td>Extract text content from the selected element.</td>
-                </tr>
-                <tr>
-                  <td><code>html</code></td>
-                  <td>None</td>
-                  <td>Extract outer/inner HTML content from the selected element.</td>
-                </tr>
-                <tr>
-                  <td><code>attr(name)</code></td>
-                  <td><code>(name: string)</code></td>
-                  <td>Extract specified element attribute.</td>
-                </tr>
-                <tr>
-                  <td><code>trim</code></td>
-                  <td>None</td>
-                  <td>Trim spacing around strings.</td>
-                </tr>
-                <tr>
-                  <td><code>replace(from, to)</code></td>
-                  <td><code>(from: string, to: string)</code></td>
-                  <td>Replace all occurrences of character/string sequences.</td>
-                </tr>
-                <tr>
-                  <td><code>regex(pattern)</code></td>
-                  <td><code>(pattern: string)</code></td>
-                  <td>Match values using RegEx. Returns capture group or full match.</td>
-                </tr>
-                <tr>
-                  <td><code>split(separator)</code></td>
-                  <td><code>(separator: string)</code></td>
-                  <td>Split string values into array.</td>
-                </tr>
-                <tr>
-                  <td><code>int</code></td>
-                  <td>None</td>
-                  <td>Parse clean values into integer values.</td>
-                </tr>
-                <tr>
-                  <td><code>float</code></td>
-                  <td>None</td>
-                  <td>Parse clean values into floating-point numbers.</td>
-                </tr>
-                <tr>
-                  <td><code>fallback(value)</code></td>
-                  <td><code>(value: any)</code></td>
-                  <td>Default output if element selection evaluates to null or empty.</td>
-                </tr>
-                <tr>
-                  <td><code>filter(pattern)</code></td>
-                  <td><code>(pattern: string)</code></td>
-                  <td>Filters array elements or checks strings against regex.</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="p-6 bg-brand-card border border-brand-border rounded-xl shadow-md min-w-0" id="doc-pipes">
+            <h3 class="text-xl font-bold text-brand-text mb-4 border-b border-brand-border pb-2">3. Built-in Pipe Functions</h3>
+            <p class="text-brand-muted text-sm sm:text-base leading-relaxed mb-4">The parser validates pipe names and parameter counts. The pipes execute in order from left to right.</p>
+            <div class="max-w-full overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs sm:text-sm rounded-lg overflow-hidden border border-brand-border">
+                <thead>
+                  <tr class="bg-[#090b0f] border-b border-brand-border">
+                    <th class="px-4 py-3 text-brand-text font-bold">Pipe Name</th>
+                    <th class="px-4 py-3 text-brand-text font-bold">Arguments</th>
+                    <th class="px-4 py-3 text-brand-text font-bold">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-brand-border/40">
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>text</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Extract text content from the selected element.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>html</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Extract outer/inner HTML content from the selected element.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>attr(name)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(name: string)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Extract specified element attribute.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>trim</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Trim spacing around strings.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>replace(from, to)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(from: string, to: string)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Replace all occurrences of character/string sequences.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>regex(pattern)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(pattern: string)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Match values using RegEx. Returns capture group or full match.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>split(separator)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(separator: string)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Split string values into array.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>int</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Parse clean values into integer values.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>float</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Parse clean values into floating-point numbers.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>fallback(value)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(value: any)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Default output if element selection evaluates to null or empty.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>filter(pattern)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(pattern: string)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Filters array elements or checks strings against regex.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div class="docs-block" id="doc-api">
-            <h3>4. Programmatic API</h3>
-            <p>Expose Pipsel in your backend services or custom tooling scripts. ESM modules are standard.</p>
-            <pre><code class="language-typescript">import { parse, format, lint } from "pipsel";
+          <div class="p-6 bg-brand-card border border-brand-border rounded-xl shadow-md min-w-0" id="doc-api">
+            <h3 class="text-xl font-bold text-brand-text mb-4 border-b border-brand-border pb-2">4. Programmatic API</h3>
+            <p class="text-brand-muted text-sm sm:text-base leading-relaxed mb-4">Expose Pipsel in your backend services or custom tooling scripts. ESM modules are standard.</p>
+            <pre class="bg-[#090b0f] border border-brand-border rounded-lg p-4 max-w-full overflow-x-auto box-border"><code class="language-typescript font-mono text-xs sm:text-sm leading-relaxed">import { parse, format, lint } from "pipsel";
 
 const psl = 'title: "h1" | text | trim';
 
@@ -282,17 +327,15 @@ if (issues.length === 0) {
 }</code></pre>
           </div>
 
-          <div class="docs-block" id="doc-cli">
-            <h3>5. CLI Command Interface</h3>
-            <p>Pipsel packages a CLI utility to check files locally. Run commands directly in your shell terminal.</p>
-            <pre><code class="language-bash"># Format a rules file in-place
+          <div class="p-6 bg-brand-card border border-brand-border rounded-xl shadow-md min-w-0" id="doc-cli">
+            <h3 class="text-xl font-bold text-brand-text mb-4 border-b border-brand-border pb-2">5. CLI Interface</h3>
+            <p class="text-brand-muted text-sm sm:text-base leading-relaxed mb-4">Pipsel packages a CLI utility to check files locally. Run commands directly in your shell terminal.</p>
+            <pre class="bg-[#090b0f] border border-brand-border rounded-lg p-4 max-w-full overflow-x-auto box-border"><code class="language-bash font-mono text-xs sm:text-sm leading-relaxed"># Format a rules file in-place
 pipsel fmt rules.psl
 
 # Lint diagnostic checks (exits with non-zero on error)
 pipsel lint rules.psl</code></pre>
           </div>
-
-
 
         </div>
       </div>
@@ -301,10 +344,10 @@ pipsel lint rules.psl</code></pre>
   </div>
 
   <!-- Footer -->
-  <footer class="footer">
-    <div class="footer-content">
+  <footer class="mt-20 border-t border-brand-border bg-brand-bg/70 backdrop-blur-md py-8 w-full">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-brand-muted">
       <p>© 2026 Pipsel. Distributed under the MIT License.</p>
-      <a href="https://github.com/litepacks/pipsel" target="_blank" rel="noopener noreferrer" class="github-link">
+      <a href="https://github.com/litepacks/pipsel" target="_blank" rel="noopener noreferrer" class="github-link flex items-center hover:text-brand-text transition-colors duration-200">
         <svg height="16" viewBox="0 0 16 16" width="16" style="fill: currentColor; display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.35 2.69.91 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8z"></path></svg>View on GitHub
       </a>
     </div>
