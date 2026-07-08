@@ -226,6 +226,11 @@
                     <td class="px-4 py-3 text-brand-muted leading-relaxed">Iterates over selector array. Scopes children context to each item.</td>
                   </tr>
                   <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold">Primitive List</td>
+                    <td class="px-4 py-3"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">tags[]: ".tag" &#124; text &#124; trim</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Extracts all matching elements into a flat primitive array (strings, numbers, etc.).</td>
+                  </tr>
+                  <tr>
                     <td class="px-4 py-3 text-brand-text font-semibold">Meta Variables</td>
                     <td class="px-4 py-3"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">source: @url</code></td>
                     <td class="px-4 py-3 text-brand-muted leading-relaxed">Injects run parameters (<code>@url</code>, <code>@timestamp</code>). No selector needed.</td>
@@ -269,6 +274,51 @@
                     <td class="px-4 py-3 text-brand-muted leading-relaxed">Trim spacing around strings.</td>
                   </tr>
                   <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>lowercase / lower</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Converts string to lowercase.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>uppercase / upper</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Converts string to uppercase.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>titlecase / title</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Converts string to Title Case.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>slugify</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Converts string into a URL-safe slug.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>clean</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Collapses multiple spaces/newlines into a single space.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>prefix(value)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(value: string)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Prepends the prefix string value.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>suffix(value)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(value: string)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Appends the suffix string value.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>substring / slice</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(start: number, end?: number)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Extracts characters between start and end indices.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>trim_start / trim_end</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Trims whitespace from start or end of string.</td>
+                  </tr>
+                  <tr>
                     <td class="px-4 py-3 text-brand-text font-semibold"><code>replace(from, to)</code></td>
                     <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(from: string, to: string)</code></td>
                     <td class="px-4 py-3 text-brand-muted leading-relaxed">Replace all occurrences of character/string sequences.</td>
@@ -292,6 +342,46 @@
                     <td class="px-4 py-3 text-brand-text font-semibold"><code>float</code></td>
                     <td class="px-4 py-3 text-brand-muted">None</td>
                     <td class="px-4 py-3 text-brand-muted leading-relaxed">Parse clean values into floating-point numbers.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>abs</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Returns the absolute value of a number.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>round(decimals)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(decimals?: number)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Rounds a number to the specified decimal places (default 0).</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>ceil / floor</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Rounds a number up (ceil) or down (floor).</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>add(value) / subtract(value)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(value: number)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Add or subtract a value.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>multiply(value) / divide(value)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(value: number)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Multiply or divide by a value.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>min / max</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Returns the minimum or maximum of a numeric array.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>sum / avg / average</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Calculates sum or average of a numeric array.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>bool / boolean</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Converts values to booleans. Absent elements resolve to false.</td>
                   </tr>
                   <tr>
                     <td class="px-4 py-3 text-brand-text font-semibold"><code>fallback(value)</code></td>

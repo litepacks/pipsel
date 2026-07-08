@@ -21,11 +21,42 @@ const BUILT_IN_PIPES = {
 
   // Transformers (Primitive -> Primitive)
   trim: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  trim_start: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  trimStart: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  trim_end: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  trimEnd: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  lowercase: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  lower: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  uppercase: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  upper: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  titlecase: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  title: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  slugify: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  clean: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  prefix: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  suffix: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  substring: { minArgs: 1, maxArgs: 2, isExtractor: false, isTraversal: false },
+  slice: { minArgs: 1, maxArgs: 2, isExtractor: false, isTraversal: false },
   replace: { minArgs: 2, maxArgs: 2, isExtractor: false, isTraversal: false },
   regex: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
   split: { minArgs: 1, maxArgs: 2, isExtractor: false, isTraversal: false },
   int: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
   float: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  abs: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  round: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+  ceil: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  floor: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  add: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  subtract: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  multiply: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  divide: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  min: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  max: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  sum: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  avg: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  average: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  bool: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  boolean: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
   fallback: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
   filter: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
 };
@@ -120,17 +151,21 @@ function lintField(def: FieldDefinition, diagnostics: Diagnostic[]): void {
   }
 
   // 2. Check pipe functions
-  const pipes = def.pipes;
-  let isDom = def.source.type !== "Meta";
+  const isDom = def.source.type !== "Meta";
+  lintPipes(def.pipes, def.name, isDom, def.loc, diagnostics);
+}
+
+function lintPipes(pipes: Pipe[], name: string, isDomStart: boolean, defLoc: any, diagnostics: Diagnostic[]): void {
+  let isDom = isDomStart;
 
   if (pipes.length === 0) {
     if (isDom) {
       diagnostics.push({
-        message: `Field '${def.name}' has selector/context but is missing a content extractor (like '| text' or '| attr')`,
+        message: `Field '${name}' has selector/context but is missing a content extractor (like '| text' or '| attr')`,
         severity: "warning",
-        line: def.loc.start.line,
-        column: def.loc.start.column,
-        length: def.name.length,
+        line: defLoc.start.line,
+        column: defLoc.start.column,
+        length: name.length,
       });
     }
     return;
@@ -233,19 +268,25 @@ function lintList(def: ListDefinition, diagnostics: Diagnostic[]): void {
     }
   }
 
-  // Check invalid list blocks (empty body)
-  if (def.body.length === 0) {
-    diagnostics.push({
-      message: `List block '${def.name}' has an empty body`,
-      severity: "warning",
-      line: def.loc.start.line,
-      column: def.loc.start.column,
-      length: def.name.length,
-    });
-  }
+  if (def.body) {
+    // Check invalid list blocks (empty body)
+    if (def.body.length === 0) {
+      diagnostics.push({
+        message: `List block '${def.name}' has an empty body`,
+        severity: "warning",
+        line: def.loc.start.line,
+        column: def.loc.start.column,
+        length: def.name.length,
+      });
+    }
 
-  // Lint the nested body
-  lintScope(def.body, diagnostics);
+    // Lint the nested body
+    lintScope(def.body, diagnostics);
+  } else if (def.pipes) {
+    // Lint pipes for primitive list
+    const isDom = def.source.type !== "Meta";
+    lintPipes(def.pipes, def.name, isDom, def.loc, diagnostics);
+  }
 }
 
 function lintMeta(def: MetaDefinition, diagnostics: Diagnostic[]): void {

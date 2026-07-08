@@ -174,20 +174,32 @@ export class Parser {
       
       const source = this.parseSourceNode();
 
-      this.consume("LBRACE");
-      const body: Definition[] = [];
-      while (this.currentToken.type !== "RBRACE" && this.currentToken.type !== "EOF") {
-        body.push(this.parseDefinition());
-      }
-      const rbraceToken = this.consume("RBRACE");
+      if (this.currentToken.type === "LBRACE") {
+        this.consume("LBRACE");
+        const body: Definition[] = [];
+        while ((this.currentToken.type as string) !== "RBRACE" && (this.currentToken.type as string) !== "EOF") {
+          body.push(this.parseDefinition());
+        }
+        const rbraceToken = this.consume("RBRACE");
 
-      return {
-        type: "ListDefinition",
-        name,
-        source,
-        body,
-        loc: { start, end: rbraceToken.end },
-      };
+        return {
+          type: "ListDefinition",
+          name,
+          source,
+          body,
+          loc: { start, end: rbraceToken.end },
+        };
+      } else {
+        const pipes = this.parsePipes();
+        const end = pipes.length > 0 ? pipes[pipes.length - 1].loc.end : source.loc.end;
+        return {
+          type: "ListDefinition",
+          name,
+          source,
+          pipes,
+          loc: { start, end },
+        };
+      }
     } else {
       throw new Error(
         `Syntax error: Expected ':', '?:', or '[]:' after identifier '${name}' at line ${colonToken.start.line}, column ${colonToken.start.column}`

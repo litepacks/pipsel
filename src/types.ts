@@ -46,7 +46,8 @@ export interface ListDefinition {
   type: "ListDefinition";
   name: string;
   source: SourceNode;
-  body: Definition[];
+  body?: Definition[];
+  pipes?: Pipe[];
   loc: SourceLocation;
 }
 

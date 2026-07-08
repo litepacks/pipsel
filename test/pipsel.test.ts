@@ -660,6 +660,116 @@ d: @url
     expect((parse('field: parent').body[0] as any).source.type).toBe("Parent");
     expect((parse('field: root').body[0] as any).source.type).toBe("Root");
 
+    // New String helper transformers tests
+    const astNewStrings = parse(`
+      lowerVal: "div" | text | lowercase
+      upperVal: "div" | text | uppercase
+      titleVal: "div" | text | titlecase
+      slugVal: "div" | text | slugify
+      trimStartVal: "div" | text | trim_start
+      trimEndVal: "div" | text | trim_end
+      cleanVal: "div" | text | clean
+      prefixVal: "div" | text | prefix("pre-")
+      suffixVal: "div" | text | suffix("-post")
+      sliceVal: "div" | text | substring(1, 4)
+    `);
+    const resNewStrings = execute(astNewStrings, { html: "<div>  hello beautiful world  </div>" });
+    expect(resNewStrings.lowerVal).toBe("  hello beautiful world  ");
+    expect(resNewStrings.upperVal).toBe("  HELLO BEAUTIFUL WORLD  ");
+    expect(resNewStrings.titleVal).toBe("  Hello Beautiful World  ");
+    expect(resNewStrings.slugVal).toBe("hello-beautiful-world");
+    expect(resNewStrings.trimStartVal).toBe("hello beautiful world  ");
+    expect(resNewStrings.trimEndVal).toBe("  hello beautiful world");
+    expect(resNewStrings.cleanVal).toBe("hello beautiful world");
+    expect(resNewStrings.prefixVal).toBe("pre-  hello beautiful world  ");
+    expect(resNewStrings.suffixVal).toBe("  hello beautiful world  -post");
+    expect(resNewStrings.sliceVal).toBe(" he");
+
+    // New Math and Numeric helper transformers tests
+    const astNewMath = parse(`
+      absVal: "div" | text | float | abs
+      roundVal: "div" | text | float | round(2)
+      ceilVal: "div" | text | float | ceil
+      floorVal: "div" | text | float | floor
+      addVal: "div" | text | float | add(10.5)
+      subVal: "div" | text | float | subtract(2)
+      mulVal: "div" | text | float | multiply(3)
+      divVal: "div" | text | float | divide(2)
+      sumVal: "div" | text | float | sum
+      avgVal: "div" | text | float | avg
+    `);
+    const resNewMath = execute(astNewMath, { html: "<div> -10.5 </div>" });
+    expect(resNewMath.absVal).toBe(10.5);
+    expect(resNewMath.roundVal).toBe(-10.5);
+    expect(resNewMath.ceilVal).toBe(-10);
+    expect(resNewMath.floorVal).toBe(-11);
+    expect(resNewMath.addVal).toBe(0);
+    expect(resNewMath.subVal).toBe(-12.5);
+    expect(resNewMath.mulVal).toBe(-31.5);
+    expect(resNewMath.divVal).toBe(-5.25);
+    expect(resNewMath.sumVal).toBe(-10.5);
+    expect(resNewMath.avgVal).toBe(-10.5);
+
+    // New Boolean helper transformers tests
+    const astNewBool = parse(`
+      boolTrue: ".yes" | text | bool
+      boolFalse: ".no" | text | bool
+      boolAbsent: ".absent" | bool
+      boolOn: ".on" | text | boolean
+      boolOff: ".off" | text | boolean
+      boolNum: ".num" | text | int | bool
+    `);
+    const resNewBool = execute(astNewBool, {
+      html: `
+        <div>
+          <span class="yes">yes</span>
+          <span class="no">false</span>
+          <span class="on">on</span>
+          <span class="off">0</span>
+          <span class="num">42</span>
+        </div>
+      `
+    });
+    expect(resNewBool.boolTrue).toBe(true);
+    expect(resNewBool.boolFalse).toBe(false);
+    expect(resNewBool.boolAbsent).toBe(false);
+    expect(resNewBool.boolOn).toBe(true);
+    expect(resNewBool.boolOff).toBe(false);
+    expect(resNewBool.boolNum).toBe(true);
+
+    // Primitive lists parsing, formatting, and execution tests
+    const pslPrimitiveList = `
+      tags[]: ".tags a" | text | trim | lowercase
+      numbers[]: ".num" | text | int
+      defaultList[]: ".tags a"
+    `;
+    const astPrimitiveList = parse(pslPrimitiveList);
+    expect(astPrimitiveList.body[0].type).toBe("ListDefinition");
+    expect((astPrimitiveList.body[0] as any).body).toBeUndefined();
+    expect((astPrimitiveList.body[0] as any).pipes).toHaveLength(3);
+
+    // Format check
+    const formattedList = format(pslPrimitiveList);
+    expect(formattedList).toContain('tags[]: ".tags a" | text | trim | lowercase');
+
+    // Exec check
+    const resPrimitiveList = execute(astPrimitiveList, {
+      html: `
+        <div>
+          <div class="tags">
+            <a>  Tag-A  </a>
+            <a>  Tag-B  </a>
+          </div>
+          <span class="num">1</span>
+          <span class="num">2</span>
+          <span class="num">3</span>
+        </div>
+      `
+    });
+    expect(resPrimitiveList.tags).toEqual(["tag-a", "tag-b"]);
+    expect(resPrimitiveList.numbers).toEqual([1, 2, 3]);
+    expect(resPrimitiveList.defaultList).toEqual(["Tag-A", "Tag-B"]);
+
     // Import browser entry to cover its export statements
     await import("../src/browser.js");
   });

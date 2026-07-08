@@ -80,12 +80,17 @@ function formatList(def: ListDefinition, indentLevel: number): string {
   const indent = " ".repeat(indentLevel * 2);
   const sourceStr = formatSourceNode(def.source);
 
-  if (def.body.length === 0) {
-    return `${indent}${def.name}[]: ${sourceStr} {}`;
-  }
+  if (def.body) {
+    if (def.body.length === 0) {
+      return `${indent}${def.name}[]: ${sourceStr} {}`;
+    }
 
-  const formattedBody = formatScope(def.body, indentLevel + 1);
-  return `${indent}${def.name}[]: ${sourceStr} {\n${formattedBody}\n${indent}}`;
+    const formattedBody = formatScope(def.body, indentLevel + 1);
+    return `${indent}${def.name}[]: ${sourceStr} {\n${formattedBody}\n${indent}}`;
+  } else {
+    const pipesStr = def.pipes ? def.pipes.map(formatPipe).join("") : "";
+    return `${indent}${def.name}[]: ${sourceStr}${pipesStr}`;
+  }
 }
 
 function formatMeta(def: MetaDefinition, indent: string): string {

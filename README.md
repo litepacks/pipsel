@@ -40,13 +40,18 @@ title: "h1" | text | trim | fallback("Untitled Product")
 ```
 
 ### 4. List Blocks
-Retrieve array items relative to parent selectors.
+Retrieve array items relative to parent selectors. List blocks can either extract arrays of nested objects:
 ```psl
 products[]: ".product-card" {
   name: ".title" | text | trim
   price: ".price" | text | trim | float
   url: "a" | attr("href")
 }
+```
+Or flat primitive list arrays (e.g., lists of strings, numbers, or booleans) directly by appending standard pipeline pipes:
+```psl
+tags[]: ".tags a" | text | trim | lowercase
+prices[]: ".product-price" | text | float
 ```
 
 ### 5. Nested Lists
@@ -83,11 +88,28 @@ extracted_at: @timestamp
 | `html` | None | Extract outer/inner HTML content from the selected element. |
 | `attr` | `(name: string)` | Extract the value of the specified element attribute. |
 | `trim` | None | Trim whitespace around string values. |
+| `trim_start` / `trim_end` | None | Trim whitespace from the start or end of string values (aliases: `trimStart`, `trimEnd`). |
+| `lowercase` / `lower` | None | Convert string values to lowercase. |
+| `uppercase` / `upper` | None | Convert string values to uppercase. |
+| `titlecase` / `title` | None | Convert string values to Title Case. |
+| `slugify` | None | Convert string values into clean, URL-safe slugs. |
+| `clean` | None | Collapse multiple whitespace/newlines into a single space. |
+| `prefix` | `(value: string)` | Prepend prefix string value. |
+| `suffix` | `(value: string)` | Append suffix string value. |
+| `substring` / `slice` | `(start: number, end?: number)` | Extract portion of a string between start and end indices. |
 | `replace` | `(from: string, to: string)` | Replace all occurrences of `from` with `to`. |
 | `regex` | `(pattern: string)` | Match values against regex. Returns first capture group (or full match). |
 | `split` | `(separator: string)` | Split string values into arrays. |
 | `int` | None | Parse values into integers. |
 | `float` | None | Parse values into floating-point numbers. |
+| `abs` | None | Returns the absolute value of a number. |
+| `round` | `(decimals?: number)` | Rounds a number to specified decimal places (default 0). |
+| `ceil` / `floor` | None | Rounds a number up (ceil) or down (floor). |
+| `add` / `subtract` | `(value: number)` | Adds or subtracts a numeric value. |
+| `multiply` / `divide` | `(value: number)` | Multiplies or divides by a numeric value. |
+| `min` / `max` | None | Returns the minimum or maximum of a numeric array. |
+| `sum` / `avg` | None | Returns the sum or average of a numeric array (alias: `average`). |
+| `bool` / `boolean` | None | Converts values to booleans. Absent selector elements evaluate to `false`. |
 | `fallback` | `(value: any)` | Use specified fallback value if current value is null, undefined, or empty. |
 | `filter` | `(pattern: string)` | Filter items (arrays or strings) that match the regex pattern. |
 

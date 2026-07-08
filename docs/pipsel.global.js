@@ -401,19 +401,31 @@ var Pipsel = (() => {
       } else if (colonToken.type === "LIST_COLON") {
         this.consume("LIST_COLON");
         const source = this.parseSourceNode();
-        this.consume("LBRACE");
-        const body = [];
-        while (this.currentToken.type !== "RBRACE" && this.currentToken.type !== "EOF") {
-          body.push(this.parseDefinition());
+        if (this.currentToken.type === "LBRACE") {
+          this.consume("LBRACE");
+          const body = [];
+          while (this.currentToken.type !== "RBRACE" && this.currentToken.type !== "EOF") {
+            body.push(this.parseDefinition());
+          }
+          const rbraceToken = this.consume("RBRACE");
+          return {
+            type: "ListDefinition",
+            name,
+            source,
+            body,
+            loc: { start, end: rbraceToken.end }
+          };
+        } else {
+          const pipes = this.parsePipes();
+          const end = pipes.length > 0 ? pipes[pipes.length - 1].loc.end : source.loc.end;
+          return {
+            type: "ListDefinition",
+            name,
+            source,
+            pipes,
+            loc: { start, end }
+          };
         }
-        const rbraceToken = this.consume("RBRACE");
-        return {
-          type: "ListDefinition",
-          name,
-          source,
-          body,
-          loc: { start, end: rbraceToken.end }
-        };
       } else {
         throw new Error(
           `Syntax error: Expected ':', '?:', or '[]:' after identifier '${name}' at line ${colonToken.start.line}, column ${colonToken.start.column}`
@@ -545,13 +557,18 @@ var Pipsel = (() => {
   function formatList(def, indentLevel) {
     const indent = " ".repeat(indentLevel * 2);
     const sourceStr = formatSourceNode(def.source);
-    if (def.body.length === 0) {
-      return `${indent}${def.name}[]: ${sourceStr} {}`;
-    }
-    const formattedBody = formatScope(def.body, indentLevel + 1);
-    return `${indent}${def.name}[]: ${sourceStr} {
+    if (def.body) {
+      if (def.body.length === 0) {
+        return `${indent}${def.name}[]: ${sourceStr} {}`;
+      }
+      const formattedBody = formatScope(def.body, indentLevel + 1);
+      return `${indent}${def.name}[]: ${sourceStr} {
 ${formattedBody}
 ${indent}}`;
+    } else {
+      const pipesStr = def.pipes ? def.pipes.map(formatPipe).join("") : "";
+      return `${indent}${def.name}[]: ${sourceStr}${pipesStr}`;
+    }
   }
   function formatMeta(def, indent) {
     return `${indent}${def.name}: ${def.metaVariable}`;
@@ -592,11 +609,42 @@ ${indent}}`;
     last: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: true },
     // Transformers (Primitive -> Primitive)
     trim: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    trim_start: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    trimStart: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    trim_end: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    trimEnd: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    lowercase: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    lower: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    uppercase: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    upper: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    titlecase: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    title: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    slugify: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    clean: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    prefix: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    suffix: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    substring: { minArgs: 1, maxArgs: 2, isExtractor: false, isTraversal: false },
+    slice: { minArgs: 1, maxArgs: 2, isExtractor: false, isTraversal: false },
     replace: { minArgs: 2, maxArgs: 2, isExtractor: false, isTraversal: false },
     regex: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
     split: { minArgs: 1, maxArgs: 2, isExtractor: false, isTraversal: false },
     int: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
     float: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    abs: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    round: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+    ceil: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    floor: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    add: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    subtract: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    multiply: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    divide: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    min: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    max: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    sum: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    avg: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    average: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    bool: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    boolean: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
     fallback: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
     filter: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false }
   };
@@ -675,16 +723,19 @@ ${indent}}`;
         });
       }
     }
-    const pipes = def.pipes;
-    let isDom = def.source.type !== "Meta";
+    const isDom = def.source.type !== "Meta";
+    lintPipes(def.pipes, def.name, isDom, def.loc, diagnostics);
+  }
+  function lintPipes(pipes, name, isDomStart, defLoc, diagnostics) {
+    let isDom = isDomStart;
     if (pipes.length === 0) {
       if (isDom) {
         diagnostics.push({
-          message: `Field '${def.name}' has selector/context but is missing a content extractor (like '| text' or '| attr')`,
+          message: `Field '${name}' has selector/context but is missing a content extractor (like '| text' or '| attr')`,
           severity: "warning",
-          line: def.loc.start.line,
-          column: def.loc.start.column,
-          length: def.name.length
+          line: defLoc.start.line,
+          column: defLoc.start.column,
+          length: name.length
         });
       }
       return;
@@ -771,16 +822,21 @@ ${indent}}`;
         });
       }
     }
-    if (def.body.length === 0) {
-      diagnostics.push({
-        message: `List block '${def.name}' has an empty body`,
-        severity: "warning",
-        line: def.loc.start.line,
-        column: def.loc.start.column,
-        length: def.name.length
-      });
+    if (def.body) {
+      if (def.body.length === 0) {
+        diagnostics.push({
+          message: `List block '${def.name}' has an empty body`,
+          severity: "warning",
+          line: def.loc.start.line,
+          column: def.loc.start.column,
+          length: def.name.length
+        });
+      }
+      lintScope(def.body, diagnostics);
+    } else if (def.pipes) {
+      const isDom = def.source.type !== "Meta";
+      lintPipes(def.pipes, def.name, isDom, def.loc, diagnostics);
     }
-    lintScope(def.body, diagnostics);
   }
   function lintMeta(def, diagnostics) {
     if (!ALLOWED_METAS.includes(def.metaVariable)) {
