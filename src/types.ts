@@ -12,6 +12,7 @@ export interface SourceLocation {
 export interface Program {
   type: "Program";
   body: Definition[];
+  trailingComments?: string[];
   loc: SourceLocation;
 }
 
@@ -20,7 +21,8 @@ export type SourceNode =
   | { type: "Self"; loc: SourceLocation }
   | { type: "Parent"; loc: SourceLocation }
   | { type: "Root"; loc: SourceLocation }
-  | { type: "Meta"; name: string; loc: SourceLocation };
+  | { type: "Meta"; name: string; loc: SourceLocation }
+  | { type: "MatchSelector"; value: string; loc: SourceLocation };
 
 export type ASTNode =
   | Program
@@ -39,6 +41,7 @@ export interface FieldDefinition {
   isOptional: boolean;
   source: SourceNode;
   pipes: Pipe[];
+  leadingComments?: string[];
   loc: SourceLocation;
 }
 
@@ -48,6 +51,7 @@ export interface ListDefinition {
   source: SourceNode;
   body?: Definition[];
   pipes?: Pipe[];
+  leadingComments?: string[];
   loc: SourceLocation;
 }
 
@@ -55,6 +59,7 @@ export interface MetaDefinition {
   type: "MetaDefinition";
   name: string;
   metaVariable: string;
+  leadingComments?: string[];
   loc: SourceLocation;
 }
 

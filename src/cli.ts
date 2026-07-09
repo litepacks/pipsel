@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import * as fs from "fs/promises";
+import { glob } from "glob";
 import { parse, execute, format, lint } from "./index.js";
 
 const program = new Command();
@@ -58,14 +59,21 @@ program
   });
 
 program
-  .command("fmt <file>")
-  .description("Formats the specified .psl file in-place")
-  .action(async (file) => {
+  .command("fmt <pattern>")
+  .description("Formats .psl files in-place matching the specified glob pattern")
+  .action(async (pattern) => {
     try {
-      const content = await fs.readFile(file, "utf-8");
-      const formatted = format(content);
-      await fs.writeFile(file, formatted, "utf-8");
-      console.log(`Formatted ${file} successfully.`);
+      const files = await glob(pattern);
+      if (files.length === 0) {
+        console.log(`No files matched the pattern "${pattern}".`);
+        return;
+      }
+      for (const file of files) {
+        const content = await fs.readFile(file, "utf-8");
+        const formatted = format(content);
+        await fs.writeFile(file, formatted, "utf-8");
+        console.log(`Formatted ${file} successfully.`);
+      }
     } catch (err: any) {
       console.error(`Formatting error: ${err.message}`);
       process.exit(1);
@@ -73,29 +81,44 @@ program
   });
 
 program
-  .command("lint <file>")
-  .description("Lints the specified .psl file")
-  .action(async (file) => {
+  .command("lint <pattern>")
+  .description("Lints .psl files matching the specified glob pattern")
+  .action(async (pattern) => {
     try {
-      const content = await fs.readFile(file, "utf-8");
-      const diagnostics = lint(content);
-      if (diagnostics.length === 0) {
-        console.log(`No issues found in ${file}.`);
+      const files = await glob(pattern);
+      if (files.length === 0) {
+        console.log(`No files matched the pattern "${pattern}".`);
         process.exit(0);
       }
 
+      let totalErrors = 0;
+      let totalWarnings = 0;
       let hasErrors = false;
-      for (const diag of diagnostics) {
-        const severityStr = diag.severity.toUpperCase();
-        console.error(
-          `[${severityStr}] line ${diag.line}, col ${diag.column}: ${diag.message}`
-        );
-        if (diag.severity === "error") {
-          hasErrors = true;
+
+      for (const file of files) {
+        const content = await fs.readFile(file, "utf-8");
+        const diagnostics = lint(content);
+        if (diagnostics.length > 0) {
+          console.log(`Issues found in ${file}:`);
+          for (const diag of diagnostics) {
+            const severityStr = diag.severity.toUpperCase();
+            console.error(
+              `  [${severityStr}] line ${diag.line}, col ${diag.column}: ${diag.message}`
+            );
+            if (diag.severity === "error") {
+              hasErrors = true;
+              totalErrors++;
+            } else {
+              totalWarnings++;
+            }
+          }
+        } else {
+          console.log(`No issues found in ${file}.`);
         }
       }
 
       if (hasErrors) {
+        console.error(`\nLint failed: ${totalErrors} error(s), ${totalWarnings} warning(s).`);
         process.exit(1);
       } else {
         process.exit(0);

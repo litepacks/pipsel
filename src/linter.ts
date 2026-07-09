@@ -136,6 +136,16 @@ function lintField(def: FieldDefinition, diagnostics: Diagnostic[]): void {
     });
   }
 
+  if (def.source.type === "MatchSelector" && def.source.value.trim() === "") {
+    diagnostics.push({
+      message: `Empty match selector query for field '${def.name}'`,
+      severity: "error",
+      line: def.loc.start.line,
+      column: def.loc.start.column,
+      length: def.name.length,
+    });
+  }
+
   // 1b. Check meta source variable
   if (def.source.type === "Meta") {
     const metaVar = "@" + def.source.name;
@@ -247,6 +257,16 @@ function lintList(def: ListDefinition, diagnostics: Diagnostic[]): void {
   if (def.source.type === "Selector" && def.source.value.trim() === "") {
     diagnostics.push({
       message: `Empty selector for list block '${def.name}'`,
+      severity: "error",
+      line: def.loc.start.line,
+      column: def.loc.start.column,
+      length: def.name.length,
+    });
+  }
+
+  if (def.source.type === "MatchSelector" && def.source.value.trim() === "") {
+    diagnostics.push({
+      message: `Empty match selector query for list block '${def.name}'`,
       severity: "error",
       line: def.loc.start.line,
       column: def.loc.start.column,

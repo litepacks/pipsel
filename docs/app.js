@@ -51,6 +51,7 @@ title: ".hnname a" | text | trim
 
 # Primitive lists (flat arrays of strings/numbers/booleans)
 ranks[]: ".rank" | text | trim | int
+
 domains[]: ".sitestr" | text | trim
 
 stories[]: ".athing" {
@@ -156,6 +157,8 @@ function resolveSourceBrowser(source, scope, context) {
   switch (source.type) {
     case "Selector":
       return Array.from(scope.querySelectorAll(source.value));
+    case "MatchSelector":
+      return resolveMatchSelectorBrowser(source.value, scope, context);
     case "Self":
       return [scope];
     case "Parent":
@@ -793,3 +796,98 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 2000);
   }
 });
+
+const SYNONYMS = {
+  title: ["name", "heading", "header", "headline", "label"],
+  price: ["amount", "cost", "value", "price-amount", "sale"],
+  description: ["desc", "summary", "text", "body", "content"],
+  image: ["img", "src", "photo", "pic", "thumbnail", "avatar"],
+  url: ["href", "link", "path", "website"],
+};
+
+function normalizeName(name) {
+  if (!name) return "";
+  return name
+    .replace(/([A-Z])/g, " $1")
+    .replace(/[-_]+/g, " ")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function resolveMatchSelectorBrowser(query, scope, context) {
+  const qNorm = normalizeName(query);
+  const synonyms = SYNONYMS[qNorm] || [];
+  
+  let bestElements = [];
+  let bestScore = 0;
+
+  const elements = Array.from(scope.querySelectorAll("*"));
+  const allElements = [scope, ...elements];
+
+  for (const el of allElements) {
+    if (el.nodeType !== 1) continue;
+
+    const idVal = el.getAttribute("id");
+    const classVal = el.getAttribute("class");
+    const testidVal = el.getAttribute("data-testid");
+    const testVal = el.getAttribute("data-test");
+    const cyVal = el.getAttribute("data-cy");
+    const ariaVal = el.getAttribute("aria-label");
+    const nameVal = el.getAttribute("name");
+    const itempropVal = el.getAttribute("itemprop");
+    const roleVal = el.getAttribute("role");
+
+    const candidateTypes = [
+      { type: "id", val: idVal, base: 100 },
+      { type: "class", val: classVal, base: 98 },
+      { type: "data-testid", val: testidVal, base: 96 },
+      { type: "data-test", val: testVal, base: 94 },
+      { type: "data-cy", val: cyVal, base: 92 },
+      { type: "aria-label", val: ariaVal, base: 90 },
+      { type: "name", val: nameVal, base: 88 },
+      { type: "itemprop", val: itempropVal, base: 86 },
+      { type: "role", val: roleVal, base: 84 }
+    ];
+
+    let elementMaxScore = 0;
+
+    for (const cand of candidateTypes) {
+      if (!cand.val) continue;
+
+      const valNorm = normalizeName(cand.val);
+      if (!valNorm) continue;
+
+      let score = 0;
+      if (valNorm === qNorm) {
+        score = cand.base;
+      } else {
+        const valWords = valNorm.split(" ");
+        if (valWords.includes(qNorm)) {
+          score = cand.base * 0.9;
+        } else if (synonyms.some(syn => valWords.includes(syn))) {
+          score = cand.base * 0.8;
+        } else if (valNorm.includes(qNorm)) {
+          score = cand.base * 0.6;
+        } else if (synonyms.some(syn => valNorm.includes(syn))) {
+          score = cand.base * 0.5;
+        }
+      }
+
+      if (score > elementMaxScore) {
+        elementMaxScore = score;
+      }
+    }
+
+    if (elementMaxScore > 0) {
+      if (elementMaxScore > bestScore) {
+        bestScore = elementMaxScore;
+        bestElements = [el];
+      } else if (elementMaxScore === bestScore) {
+        bestElements.push(el);
+      }
+    }
+  }
+
+  return bestElements;
+}

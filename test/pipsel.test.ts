@@ -239,6 +239,22 @@ describe("Additional Coverage Tests", () => {
     // Number and boolean literal formatting in arguments
     expect(format('price: ".price" | fallback(100)')).toBe('price: ".price" | fallback(100)');
     expect(format('flag: ".flag" | fallback(true)')).toBe('flag: ".flag" | fallback(true)');
+
+    // Comments preservation check
+    const pslWithComments = [
+      '# This is a comment at the top',
+      'title: "h1" | text',
+      '',
+      'items[]: ".card" {',
+      '  # Comment inside list',
+      '  name: "h2" | text',
+      '}',
+      '# Trailing comment'
+    ].join('\n');
+    const formattedComments = format(pslWithComments);
+    expect(formattedComments).toContain('# This is a comment at the top');
+    expect(formattedComments).toContain('  # Comment inside list');
+    expect(formattedComments).toContain('# Trailing comment');
   });
 
   it("should cover linter edge cases", () => {
@@ -769,6 +785,47 @@ d: @url
     expect(resPrimitiveList.tags).toEqual(["tag-a", "tag-b"]);
     expect(resPrimitiveList.numbers).toEqual([1, 2, 3]);
     expect(resPrimitiveList.defaultList).toEqual(["Tag-A", "Tag-B"]);
+
+    // Smart Naming Match Resolver tests
+    const pslSmartMatch = `
+      title: @match("title") | text | trim
+      price: @match("price") | text | float
+      desc: @match("description") | text | trim
+      absentMatch: @match("absent-field")
+      ranks[]: @match("rank") | text | trim | int
+    `;
+    const astSmartMatch = parse(pslSmartMatch);
+
+    // Formatter check
+    const formattedSmartMatch = format(pslSmartMatch);
+    expect(formattedSmartMatch).toContain('title: @match("title") | text | trim');
+    expect(formattedSmartMatch).toContain('price: @match("price") | text | float');
+
+    // Exec check
+    const resSmartMatch = execute(astSmartMatch, {
+      html: `
+        <div>
+          <div class="product-title">  Semantic title  </div>
+          <span data-testid="price">123.45</span>
+          <p id="desc">Description text</p>
+          <div class="rank-item"> 1 </div>
+          <div class="rank-item"> 2 </div>
+          <div class="rank-item"> 3 </div>
+        </div>
+      `
+    });
+    expect(resSmartMatch.title).toBe("Semantic title");
+    expect(resSmartMatch.price).toBe(123.45);
+    expect(resSmartMatch.desc).toBe("Description text");
+    expect(resSmartMatch.absentMatch).toBeNull();
+    expect(resSmartMatch.ranks).toEqual([1, 2, 3]);
+
+    // Linter validation check
+    const smartLinterIssues = lint(`
+      errMatch: @match("") | text
+    `);
+    expect(smartLinterIssues).toHaveLength(1);
+    expect(smartLinterIssues[0].message).toContain("Empty match selector query");
 
     // Import browser entry to cover its export statements
     await import("../src/browser.js");

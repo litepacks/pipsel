@@ -58,6 +58,8 @@ function resolveSource(source: SourceNode, scope: cheerio.Cheerio<any>, context:
   switch (source.type) {
     case "Selector":
       return scope.find(source.value);
+    case "MatchSelector":
+      return resolveMatchSelectorCheerio(source.value, scope, context);
     case "Self":
       return scope;
     case "Parent":
@@ -393,4 +395,91 @@ function evaluateTransformer(pipe: Pipe, val: any): any {
     default:
       return val;
   }
+}
+
+const SYNONYMS: Record<string, string[]> = {
+  title: ["name", "heading", "header", "headline", "label"],
+  price: ["amount", "cost", "value", "price-amount", "sale"],
+  description: ["desc", "summary", "text", "body", "content"],
+  image: ["img", "src", "photo", "pic", "thumbnail", "avatar"],
+  url: ["href", "link", "path", "website"],
+};
+
+function normalizeName(name: string): string {
+  if (!name) return "";
+  return name
+    .replace(/([A-Z])/g, " $1")
+    .replace(/[-_]+/g, " ")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function resolveMatchSelectorCheerio(query: string, scope: cheerio.Cheerio<any>, context: any): cheerio.Cheerio<any> {
+  const qNorm = normalizeName(query);
+  const synonyms = SYNONYMS[qNorm] || [];
+  
+  let bestElements: any[] = [];
+  let bestScore = 0;
+
+  const elements = scope.find("*");
+  const allElements = [scope, ...elements.toArray().map((el: any) => context.$(el))];
+
+  for (const el of allElements) {
+    const node = el[0];
+    if (!node || node.type !== "tag") continue;
+
+    const attributes = node.attribs || {};
+    const candidateTypes = [
+      { type: "id", val: attributes["id"], base: 100 },
+      { type: "class", val: attributes["class"], base: 98 },
+      { type: "data-testid", val: attributes["data-testid"], base: 96 },
+      { type: "data-test", val: attributes["data-test"], base: 94 },
+      { type: "data-cy", val: attributes["data-cy"], base: 92 },
+      { type: "aria-label", val: attributes["aria-label"], base: 90 },
+      { type: "name", val: attributes["name"], base: 88 },
+      { type: "itemprop", val: attributes["itemprop"], base: 86 },
+      { type: "role", val: attributes["role"], base: 84 }
+    ];
+
+    let elementMaxScore = 0;
+
+    for (const cand of candidateTypes) {
+      if (!cand.val) continue;
+
+      const valNorm = normalizeName(cand.val);
+      if (!valNorm) continue;
+
+      let score = 0;
+      if (valNorm === qNorm) {
+        score = cand.base;
+      } else {
+        const valWords = valNorm.split(" ");
+        if (valWords.includes(qNorm)) {
+          score = cand.base * 0.9;
+        } else if (synonyms.some((syn: string) => valWords.includes(syn))) {
+          score = cand.base * 0.8;
+        } else if (valNorm.includes(qNorm)) {
+          score = cand.base * 0.6;
+        } else if (synonyms.some((syn: string) => valNorm.includes(syn))) {
+          score = cand.base * 0.5;
+        }
+      }
+
+      if (score > elementMaxScore) {
+        elementMaxScore = score;
+      }
+    }
+
+    if (elementMaxScore > 0) {
+      if (elementMaxScore > bestScore) {
+        bestScore = elementMaxScore;
+        bestElements = [node];
+      } else if (elementMaxScore === bestScore) {
+        bestElements.push(node);
+      }
+    }
+  }
+
+  return bestElements.length > 0 ? context.$(bestElements) : context.$();
 }

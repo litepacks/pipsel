@@ -44,10 +44,14 @@ export class Parser {
       body.push(this.parseDefinition());
     }
 
+    const trailingComments = [...this.lexer.skippedComments];
+    this.lexer.skippedComments = [];
+
     const end = this.currentToken.end;
     return {
       type: "Program",
       body,
+      trailingComments,
       loc: { start, end },
     };
   }
@@ -86,6 +90,17 @@ export class Parser {
       };
     }
     if (token.type === "META") {
+      if (token.value === "@match") {
+        this.consume("META");
+        this.consume("LPAREN");
+        const valueToken = this.consume("STRING");
+        const rparenToken = this.consume("RPAREN");
+        return {
+          type: "MatchSelector",
+          value: valueToken.value,
+          loc: { start, end: rparenToken.end },
+        };
+      }
       this.consume("META");
       const name = token.value.substring(1); // strip '@'
       return {
@@ -125,6 +140,15 @@ export class Parser {
   }
 
   private parseDefinition(): Definition {
+    const leadingComments = [...this.lexer.skippedComments];
+    this.lexer.skippedComments = [];
+
+    const def = this.parseDefinitionRaw();
+    def.leadingComments = leadingComments;
+    return def;
+  }
+
+  private parseDefinitionRaw(): Definition {
     const nameToken = this.consume("IDENTIFIER");
     const name = nameToken.value;
     const start = nameToken.start;

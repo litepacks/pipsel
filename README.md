@@ -78,6 +78,14 @@ source_url: @url
 extracted_at: @timestamp
 ```
 
+### 7. Smart Naming Match Resolver
+If a website uses dynamic/unpredictable CSS classes, or you want to write more resilient rules, use the smart semantic match resolver:
+```psl
+title: @match("title") | text | trim
+price: @match("price") | text | float
+```
+The engine deterministically scores DOM elements looking for matches in `id`, `class`, `data-testid`, `data-test`, `data-cy`, `aria-label`, `name`, `itemprop`, and `role` attributes, including plural/synonym matches (e.g. `price` matches `.amount` or `.cost`).
+
 ---
 
 ## Built-in Pipe Functions

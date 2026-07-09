@@ -35,6 +35,7 @@ var Pipsel = (() => {
       __publicField(this, "offset", 0);
       __publicField(this, "line", 1);
       __publicField(this, "column", 1);
+      __publicField(this, "skippedComments", []);
       this.source = source;
     }
     peek() {
@@ -157,18 +158,24 @@ var Pipsel = (() => {
           continue;
         }
         if (char === "#") {
+          const commentStart = this.offset;
           this.nextChar();
           while (this.peek() && this.peek() !== "\n") {
             this.nextChar();
           }
+          const text = this.source.substring(commentStart, this.offset);
+          this.skippedComments.push(text);
           continue;
         }
         if (char === "/" && this.source[this.offset + 1] === "/") {
+          const commentStart = this.offset;
           this.nextChar();
           this.nextChar();
           while (this.peek() && this.peek() !== "\n") {
             this.nextChar();
           }
+          const text = this.source.substring(commentStart, this.offset);
+          this.skippedComments.push(text);
           continue;
         }
         break;
@@ -283,10 +290,13 @@ var Pipsel = (() => {
       while (this.currentToken.type !== "EOF") {
         body.push(this.parseDefinition());
       }
+      const trailingComments = [...this.lexer.skippedComments];
+      this.lexer.skippedComments = [];
       const end = this.currentToken.end;
       return {
         type: "Program",
         body,
+        trailingComments,
         loc: { start, end }
       };
     }
@@ -323,6 +333,17 @@ var Pipsel = (() => {
         };
       }
       if (token.type === "META") {
+        if (token.value === "@match") {
+          this.consume("META");
+          this.consume("LPAREN");
+          const valueToken = this.consume("STRING");
+          const rparenToken = this.consume("RPAREN");
+          return {
+            type: "MatchSelector",
+            value: valueToken.value,
+            loc: { start, end: rparenToken.end }
+          };
+        }
         this.consume("META");
         const name = token.value.substring(1);
         return {
@@ -360,6 +381,13 @@ var Pipsel = (() => {
       );
     }
     parseDefinition() {
+      const leadingComments = [...this.lexer.skippedComments];
+      this.lexer.skippedComments = [];
+      const def = this.parseDefinitionRaw();
+      def.leadingComments = leadingComments;
+      return def;
+    }
+    parseDefinitionRaw() {
       const nameToken = this.consume("IDENTIFIER");
       const name = nameToken.value;
       const start = nameToken.start;
@@ -509,7 +537,15 @@ var Pipsel = (() => {
     return formatProgram(ast);
   }
   function formatProgram(program) {
-    return formatScope(program.body, 0);
+    let result = formatScope(program.body, 0);
+    const trailing = program.trailingComments;
+    if (trailing && trailing.length > 0) {
+      if (result.length > 0 && !result.endsWith("\n")) {
+        result += "\n";
+      }
+      result += trailing.join("\n");
+    }
+    return result;
   }
   function formatScope(definitions, indentLevel) {
     const formattedParts = [];
@@ -522,6 +558,12 @@ var Pipsel = (() => {
         formatted = formatList(current, indentLevel);
       } else {
         formatted = formatMeta(current, " ".repeat(indentLevel * 2));
+      }
+      const leading = current.leadingComments;
+      if (leading && leading.length > 0) {
+        const indent = " ".repeat(indentLevel * 2);
+        const commentsStr = leading.map((c) => indent + c).join("\n");
+        formatted = commentsStr + "\n" + formatted;
       }
       if (i > 0) {
         const prev = definitions[i - 1];
@@ -546,6 +588,8 @@ var Pipsel = (() => {
         return "root";
       case "Meta":
         return `@${source.name}`;
+      case "MatchSelector":
+        return `@match("${escapeString(source.value)}")`;
     }
   }
   function formatField(def, indent) {
@@ -711,6 +755,15 @@ ${indent}}`;
         length: def.name.length
       });
     }
+    if (def.source.type === "MatchSelector" && def.source.value.trim() === "") {
+      diagnostics.push({
+        message: `Empty match selector query for field '${def.name}'`,
+        severity: "error",
+        line: def.loc.start.line,
+        column: def.loc.start.column,
+        length: def.name.length
+      });
+    }
     if (def.source.type === "Meta") {
       const metaVar = "@" + def.source.name;
       if (!ALLOWED_METAS.includes(metaVar)) {
@@ -804,6 +857,15 @@ ${indent}}`;
     if (def.source.type === "Selector" && def.source.value.trim() === "") {
       diagnostics.push({
         message: `Empty selector for list block '${def.name}'`,
+        severity: "error",
+        line: def.loc.start.line,
+        column: def.loc.start.column,
+        length: def.name.length
+      });
+    }
+    if (def.source.type === "MatchSelector" && def.source.value.trim() === "") {
+      diagnostics.push({
+        message: `Empty match selector query for list block '${def.name}'`,
         severity: "error",
         line: def.loc.start.line,
         column: def.loc.start.column,

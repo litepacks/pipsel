@@ -17,7 +17,15 @@ export function format(source: string): string {
 }
 
 function formatProgram(program: Program): string {
-  return formatScope(program.body, 0);
+  let result = formatScope(program.body, 0);
+  const trailing = program.trailingComments;
+  if (trailing && trailing.length > 0) {
+    if (result.length > 0 && !result.endsWith("\n")) {
+      result += "\n";
+    }
+    result += trailing.join("\n");
+  }
+  return result;
 }
 
 function formatScope(definitions: Definition[], indentLevel: number): string {
@@ -33,6 +41,13 @@ function formatScope(definitions: Definition[], indentLevel: number): string {
       formatted = formatList(current, indentLevel);
     } else {
       formatted = formatMeta(current, " ".repeat(indentLevel * 2));
+    }
+
+    const leading = current.leadingComments;
+    if (leading && leading.length > 0) {
+      const indent = " ".repeat(indentLevel * 2);
+      const commentsStr = leading.map(c => indent + c).join("\n");
+      formatted = commentsStr + "\n" + formatted;
     }
 
     if (i > 0) {
@@ -65,6 +80,8 @@ function formatSourceNode(source: SourceNode): string {
       return "root";
     case "Meta":
       return `@${source.name}`;
+    case "MatchSelector":
+      return `@match("${escapeString(source.value)}")`;
   }
 }
 

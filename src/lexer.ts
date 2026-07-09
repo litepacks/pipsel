@@ -31,6 +31,7 @@ export class Lexer {
   private offset = 0;
   private line = 1;
   private column = 1;
+  public skippedComments: string[] = [];
 
   constructor(source: string) {
     this.source = source;
@@ -186,18 +187,24 @@ export class Lexer {
 
       // Skip comments (both # and //)
       if (char === "#") {
+        const commentStart = this.offset;
         this.nextChar();
         while (this.peek() && this.peek() !== "\n") {
           this.nextChar();
         }
+        const text = this.source.substring(commentStart, this.offset);
+        this.skippedComments.push(text);
         continue;
       }
       if (char === "/" && this.source[this.offset + 1] === "/") {
+        const commentStart = this.offset;
         this.nextChar();
         this.nextChar();
         while (this.peek() && this.peek() !== "\n") {
           this.nextChar();
         }
+        const text = this.source.substring(commentStart, this.offset);
+        this.skippedComments.push(text);
         continue;
       }
 
