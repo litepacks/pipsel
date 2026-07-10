@@ -259,7 +259,9 @@ function evaluateList(def, scope, context) {
           isSelection = false;
         }
       }
-      listResult.push(val);
+      if (val !== null && val !== undefined) {
+        listResult.push(val);
+      }
     });
   } else {
     elements.forEach(el => {

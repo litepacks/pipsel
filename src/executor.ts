@@ -160,7 +160,9 @@ function evaluateList(def: ListDefinition, scope: cheerio.Cheerio<any>, context:
           isSelection = false;
         }
       }
-      listResult.push(val);
+      if (val !== null && val !== undefined) {
+        listResult.push(val);
+      }
     });
   } else {
     elements.each((_, el) => {

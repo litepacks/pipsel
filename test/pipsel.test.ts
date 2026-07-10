@@ -758,6 +758,7 @@ d: @url
       tags[]: ".tags a" | text | trim | lowercase
       numbers[]: ".num" | text | int
       defaultList[]: ".tags a"
+      filteredList[]: ".num" | text | int | filter("^2$")
     `;
     const astPrimitiveList = parse(pslPrimitiveList);
     expect(astPrimitiveList.body[0].type).toBe("ListDefinition");
@@ -785,6 +786,7 @@ d: @url
     expect(resPrimitiveList.tags).toEqual(["tag-a", "tag-b"]);
     expect(resPrimitiveList.numbers).toEqual([1, 2, 3]);
     expect(resPrimitiveList.defaultList).toEqual(["Tag-A", "Tag-B"]);
+    expect(resPrimitiveList.filteredList).toEqual([2]);
 
     // Smart Naming Match Resolver tests
     const pslSmartMatch = `
