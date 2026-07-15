@@ -33,13 +33,19 @@ Fields marked with `?` are optional. If they cannot be found in the DOM (or eval
 discount?: ".discount" | text | trim
 ```
 
-### 3. Fallbacks
+### 3. Nullish Coalescing (Selector Fallbacks)
+Resolve selectors sequentially. If a selector doesn't match any DOM elements, the engine falls back to the next selector.
+```psl
+title: "h1" ?? ".alternative-title" | text | trim
+```
+
+### 4. Fallbacks
 Define custom values for cases where selectors don't match or evaluate to empty values.
 ```psl
 title: "h1" | text | trim | fallback("Untitled Product")
 ```
 
-### 4. List Blocks
+### 5. List Blocks
 Retrieve array items relative to parent selectors. List blocks can either extract arrays of nested objects:
 ```psl
 products[]: ".product-card" {
@@ -54,7 +60,7 @@ tags[]: ".tags a" | text | trim | lowercase
 prices[]: ".product-price" | text | float
 ```
 
-### 5. Nested Lists
+### 6. Nested Lists
 Scopes are recursively resolved.
 ```psl
 categories[]: ".category" {
@@ -67,7 +73,7 @@ categories[]: ".category" {
 }
 ```
 
-### 6. Meta Variables
+### 7. Meta Variables
 Assign current runtime parameters to fields without selectors:
 - `@url`: The URL currently being executed.
 - `@timestamp`: The ISO timestamp of the extraction execution.
@@ -78,7 +84,7 @@ source_url: @url
 extracted_at: @timestamp
 ```
 
-### 7. Smart Naming Match Resolver
+### 8. Smart Naming Match Resolver
 If a website uses dynamic/unpredictable CSS classes, or you want to write more resilient rules, use the smart semantic match resolver:
 ```psl
 title: @match("title") | text | trim
@@ -120,6 +126,20 @@ The engine deterministically scores DOM elements looking for matches in `id`, `c
 | `bool` / `boolean` | None | Converts values to booleans. Absent selector elements evaluate to `false`. |
 | `fallback` | `(value: any)` | Use specified fallback value if current value is null, undefined, or empty. |
 | `filter` | `(pattern: string)` | Filter items (arrays or strings) that match the regex pattern. |
+| `url_parse` / `urlParse` | None | Parse URL string into a structured object containing properties: `href`, `protocol`, `hostname`, `port`, `pathname`, `search`, `hash`, `origin`, and `params` (query parameters key-value object). |
+| `url_protocol` / `urlProtocol` | None | Extract the protocol (scheme) from a URL string (e.g., `https:`). |
+| `url_hostname` / `urlHostname` | None | Extract the hostname/domain from a URL string (e.g., `example.com`). |
+| `url_port` / `urlPort` | None | Extract the port number from a URL string. |
+| `url_pathname` / `urlPathname` / `url_path` / `urlPath` | None | Extract the path component from a URL string (e.g., `/pathname`). |
+| `url_search` / `urlSearch` / `url_query` / `urlQuery` | None | Extract the query string from a URL string (e.g., `?q=test`). |
+| `url_hash` / `urlHash` | None | Extract the hash/fragment component from a URL string (e.g., `#section`). |
+| `url_origin` / `urlOrigin` | None | Extract the origin from a URL string (e.g., `https://example.com`). |
+| `url_param` / `urlParam` | `(name: string)` | Extract the value of the specified query parameter from a URL string. |
+| `url_resolve` / `urlResolve` / `url_join` / `urlJoin` | `(base?: string)` | Resolve a relative URL against a base URL (defaults to context `@url`). |
+| `unique` | `(key?: string)` | Retain unique values in an array. For primitive arrays, uses Set. For object arrays, checks uniqueness by the specified `key`. |
+| `json_parse` / `jsonParse` / `json` | None | Parse a JSON string into a structured JavaScript object or array. |
+| `>`, `<`, `>=`, `<=`, `==`, `=`, `!=` | `(value: any)` | Compare the pipeline value against the argument (numerically or lexically). Returns a boolean. |
+| `required` | `(message?: string)` | Throw a runtime validation error if the pipeline value is null, undefined, empty string, or an empty list. Supports custom error message. |
 
 ---
 
@@ -163,6 +183,25 @@ pipsel fmt rules.psl
 Diagnoses any issues in the `.psl` script (exits with non-zero code on errors).
 ```bash
 pipsel lint rules.psl
+```
+
+### Explain a Rules File
+Prints a visual tree representation of each field's pipeline in the `.psl` file.
+```bash
+pipsel explain rules.psl
+```
+Example output:
+```
+title
+└── h1
+    ├── text
+    └── trim
+
+price
+└── .price
+    ├── text
+    ├── replace("$","")
+    └── float
 ```
 
 ---

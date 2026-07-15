@@ -75,7 +75,28 @@ function resolveSource(source: SourceNode, scope: cheerio.Cheerio<any>, context:
         default:
           return null;
       }
+    case "Coalesce": {
+      let finalVal: any = null;
+      for (const subSource of source.sources) {
+        finalVal = resolveSource(subSource, scope, context);
+        if (isPresentSource(finalVal)) {
+          return finalVal;
+        }
+      }
+      return finalVal;
+    }
   }
+}
+
+function isPresentSource(val: any): boolean {
+  if (val === null || val === undefined) return false;
+  if (typeof val === "object" && "length" in val) {
+    return val.length > 0;
+  }
+  if (typeof val === "string") {
+    return val.trim() !== "";
+  }
+  return true;
 }
 
 function evaluateField(def: FieldDefinition, scope: cheerio.Cheerio<any>, context: any): any {
@@ -92,6 +113,12 @@ function evaluateField(def: FieldDefinition, scope: cheerio.Cheerio<any>, contex
 
   const elements = sourceVal as cheerio.Cheerio<any>;
   if (elements.length === 0) {
+    const requiredPipe = def.pipes.find(p => p.name === 'required');
+    if (requiredPipe) {
+      const customMsg = requiredPipe.args[0]?.value as string;
+      throw new Error(customMsg || `Required field validation failed: value is nullish or empty`);
+    }
+
     const fallbackPipe = def.pipes.find(p => p.name === 'fallback');
     if (fallbackPipe && fallbackPipe.args.length > 0) {
       return fallbackPipe.args[0].value;
@@ -136,7 +163,15 @@ function evaluateList(def: ListDefinition, scope: cheerio.Cheerio<any>, context:
   }
 
   const elements = sourceVal as cheerio.Cheerio<any>;
-  const listResult: any[] = [];
+  if (elements.length === 0 && def.pipes) {
+    const requiredPipe = def.pipes.find(p => p.name === 'required');
+    if (requiredPipe) {
+      const customMsg = requiredPipe.args[0]?.value as string;
+      throw new Error(customMsg || `Required field validation failed: value is nullish or empty`);
+    }
+  }
+
+  let listResult: any[] = [];
 
   if (def.body) {
     elements.each((_, el) => {
@@ -144,26 +179,63 @@ function evaluateList(def: ListDefinition, scope: cheerio.Cheerio<any>, context:
       listResult.push(itemResult);
     });
   } else if (def.pipes && def.pipes.length > 0) {
-    elements.each((_, el) => {
-      let val: any = context.$(el);
-      let isSelection = true;
-      for (let i = 0; i < def.pipes!.length; i++) {
-        const pipe = def.pipes![i];
-        val = evaluatePipe(pipe, val, isSelection, context);
-        const isTraversal = ["find", "closest", "parent", "children", "siblings", "next", "prev", "eq", "first", "last"].includes(pipe.name);
-        const isExtractor = ["text", "html", "attr"].includes(pipe.name);
-        if (isTraversal) {
-          isSelection = true;
-        } else if (isExtractor) {
-          isSelection = false;
-        } else {
-          isSelection = false;
+    const ARRAY_PIPES = ["unique"];
+    const firstArrayPipeIdx = def.pipes.findIndex(p => ARRAY_PIPES.includes(p.name));
+
+    if (firstArrayPipeIdx === -1) {
+      elements.each((_, el) => {
+        let val: any = context.$(el);
+        let isSelection = true;
+        for (let i = 0; i < def.pipes!.length; i++) {
+          const pipe = def.pipes![i];
+          val = evaluatePipe(pipe, val, isSelection, context);
+          const isTraversal = ["find", "closest", "parent", "children", "siblings", "next", "prev", "eq", "first", "last"].includes(pipe.name);
+          const isExtractor = ["text", "html", "attr"].includes(pipe.name);
+          if (isTraversal) {
+            isSelection = true;
+          } else if (isExtractor) {
+            isSelection = false;
+          } else {
+            isSelection = false;
+          }
         }
+        if (val !== null && val !== undefined) {
+          listResult.push(val);
+        }
+      });
+    } else {
+      const elementPipes = def.pipes.slice(0, firstArrayPipeIdx);
+      const arrayPipes = def.pipes.slice(firstArrayPipeIdx);
+
+      elements.each((_, el) => {
+        let val: any = context.$(el);
+        let isSelection = true;
+        for (let i = 0; i < elementPipes.length; i++) {
+          const pipe = elementPipes[i];
+          val = evaluatePipe(pipe, val, isSelection, context);
+          const isTraversal = ["find", "closest", "parent", "children", "siblings", "next", "prev", "eq", "first", "last"].includes(pipe.name);
+          const isExtractor = ["text", "html", "attr"].includes(pipe.name);
+          if (isTraversal) {
+            isSelection = true;
+          } else if (isExtractor) {
+            isSelection = false;
+          } else {
+            isSelection = false;
+          }
+        }
+        if (val !== null && val !== undefined) {
+          listResult.push(val);
+        }
+      });
+
+      // Apply array-level pipes
+      let finalVal: any = listResult;
+      for (let i = 0; i < arrayPipes.length; i++) {
+        const pipe = arrayPipes[i];
+        finalVal = evaluateTransformer(pipe, finalVal, context);
       }
-      if (val !== null && val !== undefined) {
-        listResult.push(val);
-      }
-    });
+      listResult = Array.isArray(finalVal) ? finalVal : [finalVal];
+    }
   } else {
     elements.each((_, el) => {
       listResult.push(context.$(el).text().trim());
@@ -207,13 +279,40 @@ function evaluatePipe(pipe: Pipe, currentValue: any, isSelection: boolean, conte
       }
       default:
         // default text converter + transformer evaluation
-        return evaluateTransformer(pipe, el.text());
+        return evaluateTransformer(pipe, el.text(), context);
     }
   }
-  return evaluateTransformer(pipe, currentValue);
+  return evaluateTransformer(pipe, currentValue, context);
 }
 
-function evaluateTransformer(pipe: Pipe, val: any): any {
+function tryParseURL(val: any, context?: any): URL | null {
+  if (val === null || val === undefined) return null;
+  const cleanVal = String(val).trim();
+  const baseUrl = context?.url;
+  try {
+    if (baseUrl) {
+      return new URL(cleanVal, baseUrl);
+    }
+    return new URL(cleanVal);
+  } catch {
+    try {
+      return new URL(cleanVal);
+    } catch {
+      return null;
+    }
+  }
+}
+
+function evaluateTransformer(pipe: Pipe, val: any, context?: any): any {
+  if (pipe.name === "required") {
+    const isEmpty = val === null || val === undefined || val === "" || (Array.isArray(val) && val.length === 0);
+    if (isEmpty) {
+      const customMsg = pipe.args[0]?.value as string;
+      throw new Error(customMsg || `Required field validation failed: value is nullish or empty`);
+    }
+    return val;
+  }
+
   if (val === null || val === undefined) {
     if (pipe.name === "fallback") {
       return pipe.args[0].value;
@@ -394,9 +493,159 @@ function evaluateTransformer(pipe: Pipe, val: any): any {
         return null;
       }
     }
+    case "url_parse":
+    case "urlParse": {
+      const url = tryParseURL(val, context);
+      if (!url) return null;
+      const params: Record<string, string> = {};
+      url.searchParams.forEach((v, k) => {
+        params[k] = v;
+      });
+      return {
+        href: url.href,
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port,
+        pathname: url.pathname,
+        search: url.search,
+        hash: url.hash,
+        origin: url.origin,
+        params
+      };
+    }
+    case "url_protocol":
+    case "urlProtocol": {
+      const url = tryParseURL(val, context);
+      return url ? url.protocol : null;
+    }
+    case "url_hostname":
+    case "urlHostname": {
+      const url = tryParseURL(val, context);
+      return url ? url.hostname : null;
+    }
+    case "url_port":
+    case "urlPort": {
+      const url = tryParseURL(val, context);
+      return url ? url.port : null;
+    }
+    case "url_pathname":
+    case "urlPathname":
+    case "url_path":
+    case "urlPath": {
+      const url = tryParseURL(val, context);
+      return url ? url.pathname : null;
+    }
+    case "url_search":
+    case "urlSearch":
+    case "url_query":
+    case "urlQuery": {
+      const url = tryParseURL(val, context);
+      return url ? url.search : null;
+    }
+    case "url_hash":
+    case "urlHash": {
+      const url = tryParseURL(val, context);
+      return url ? url.hash : null;
+    }
+    case "url_origin":
+    case "urlOrigin": {
+      const url = tryParseURL(val, context);
+      return url ? url.origin : null;
+    }
+    case "url_param":
+    case "urlParam": {
+      const url = tryParseURL(val, context);
+      if (!url) return null;
+      const paramName = pipe.args[0]?.value as string;
+      return url.searchParams.get(paramName);
+    }
+    case "url_resolve":
+    case "urlResolve":
+    case "url_join":
+    case "urlJoin": {
+      if (val === null || val === undefined) return null;
+      const cleanVal = String(val).trim();
+      const customBase = pipe.args[0]?.value as string;
+      const baseUrl = customBase || context?.url;
+      try {
+        if (baseUrl) {
+          return new URL(cleanVal, baseUrl).href;
+        }
+        return new URL(cleanVal).href;
+      } catch {
+        return cleanVal;
+      }
+    }
+    case "unique": {
+      if (!Array.isArray(val)) return val;
+      const key = pipe.args[0]?.value as string;
+      if (key) {
+        const seen = new Set();
+        return val.filter(item => {
+          if (item && typeof item === "object") {
+            const kVal = (item as any)[key];
+            if (seen.has(kVal)) return false;
+            seen.add(kVal);
+            return true;
+          }
+          if (seen.has(item)) return false;
+          seen.add(item);
+          return true;
+        });
+      } else {
+        return Array.from(new Set(val));
+      }
+    }
+    case "json_parse":
+    case "jsonParse":
+    case "json": {
+      if (val === null || val === undefined) return null;
+      try {
+        return JSON.parse(String(val).trim());
+      } catch {
+        return null;
+      }
+    }
+    case ">": {
+      const right = pipe.args[0].value;
+      return compare(val, right) > 0;
+    }
+    case "<": {
+      const right = pipe.args[0].value;
+      return compare(val, right) < 0;
+    }
+    case ">=": {
+      const right = pipe.args[0].value;
+      return compare(val, right) >= 0;
+    }
+    case "<=": {
+      const right = pipe.args[0].value;
+      return compare(val, right) <= 0;
+    }
+    case "==":
+    case "=": {
+      const right = pipe.args[0].value;
+      return compare(val, right) === 0;
+    }
+    case "!=": {
+      const right = pipe.args[0].value;
+      return compare(val, right) !== 0;
+    }
     default:
       return val;
   }
+}
+
+function compare(left: any, right: any): number {
+  if (left === right) return 0;
+  const leftNum = Number(left);
+  const rightNum = Number(right);
+  if (!isNaN(leftNum) && !isNaN(rightNum)) {
+    return leftNum - rightNum;
+  }
+  const leftStr = String(left);
+  const rightStr = String(right);
+  return leftStr.localeCompare(rightStr);
 }
 
 const SYNONYMS: Record<string, string[]> = {

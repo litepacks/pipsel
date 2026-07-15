@@ -57,6 +57,26 @@ export class Parser {
   }
 
   private parseSourceNode(): SourceNode {
+    const startNode = this.parseSourceNodeRaw();
+    if (this.currentToken.type === "COALESCE") {
+      const sources: SourceNode[] = [startNode];
+      let end = startNode.loc.end;
+      while (this.currentToken.type === "COALESCE") {
+        this.consume("COALESCE");
+        const nextNode = this.parseSourceNodeRaw();
+        sources.push(nextNode);
+        end = nextNode.loc.end;
+      }
+      return {
+        type: "Coalesce",
+        sources,
+        loc: { start: startNode.loc.start, end },
+      };
+    }
+    return startNode;
+  }
+
+  private parseSourceNodeRaw(): SourceNode {
     const token = this.currentToken;
     const start = token.start;
 
@@ -241,24 +261,31 @@ export class Parser {
   }
 
   private parsePipe(): Pipe {
-    const pipeNameToken = this.consume("IDENTIFIER");
+    const isOperator = this.currentToken.type === "OPERATOR";
+    const pipeNameToken = this.consume(isOperator ? "OPERATOR" : "IDENTIFIER");
     const name = pipeNameToken.value;
     const start = pipeNameToken.start;
     const args: Literal[] = [];
 
     let end = pipeNameToken.end;
 
-    if (this.currentToken.type === "LPAREN") {
-      this.consume("LPAREN");
-      if ((this.currentToken.type as any) !== "RPAREN") {
-        args.push(this.parseLiteral());
-        while ((this.currentToken.type as any) === "COMMA") {
-          this.consume("COMMA");
+    if (isOperator) {
+      const literal = this.parseLiteral();
+      args.push(literal);
+      end = literal.loc.end;
+    } else {
+      if (this.currentToken.type === "LPAREN") {
+        this.consume("LPAREN");
+        if ((this.currentToken.type as any) !== "RPAREN") {
           args.push(this.parseLiteral());
+          while ((this.currentToken.type as any) === "COMMA") {
+            this.consume("COMMA");
+            args.push(this.parseLiteral());
+          }
         }
+        const rparenToken = this.consume("RPAREN");
+        end = rparenToken.end;
       }
-      const rparenToken = this.consume("RPAREN");
-      end = rparenToken.end;
     }
 
     return {

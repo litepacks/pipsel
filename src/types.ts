@@ -22,7 +22,8 @@ export type SourceNode =
   | { type: "Parent"; loc: SourceLocation }
   | { type: "Root"; loc: SourceLocation }
   | { type: "Meta"; name: string; loc: SourceLocation }
-  | { type: "MatchSelector"; value: string; loc: SourceLocation };
+  | { type: "MatchSelector"; value: string; loc: SourceLocation }
+  | { type: "Coalesce"; sources: SourceNode[]; loc: SourceLocation };
 
 export type ASTNode =
   | Program

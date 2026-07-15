@@ -69,6 +69,43 @@ var Pipsel = (() => {
       if (!char) {
         return { type: "EOF", value: "", start, end: start };
       }
+      if (char === ">" && this.source[this.offset + 1] === "=") {
+        this.nextChar();
+        this.nextChar();
+        return { type: "OPERATOR", value: ">=", start, end: this.currentPos() };
+      }
+      if (char === "<" && this.source[this.offset + 1] === "=") {
+        this.nextChar();
+        this.nextChar();
+        return { type: "OPERATOR", value: "<=", start, end: this.currentPos() };
+      }
+      if (char === "=" && this.source[this.offset + 1] === "=") {
+        this.nextChar();
+        this.nextChar();
+        return { type: "OPERATOR", value: "==", start, end: this.currentPos() };
+      }
+      if (char === "!" && this.source[this.offset + 1] === "=") {
+        this.nextChar();
+        this.nextChar();
+        return { type: "OPERATOR", value: "!=", start, end: this.currentPos() };
+      }
+      if (char === ">") {
+        this.nextChar();
+        return { type: "OPERATOR", value: ">", start, end: this.currentPos() };
+      }
+      if (char === "<") {
+        this.nextChar();
+        return { type: "OPERATOR", value: "<", start, end: this.currentPos() };
+      }
+      if (char === "=") {
+        this.nextChar();
+        return { type: "OPERATOR", value: "=", start, end: this.currentPos() };
+      }
+      if (char === "?" && this.source[this.offset + 1] === "?") {
+        this.nextChar();
+        this.nextChar();
+        return { type: "COALESCE", value: "??", start, end: this.currentPos() };
+      }
       if (char === "?" && this.source[this.offset + 1] === ":") {
         this.nextChar();
         this.nextChar();
@@ -301,6 +338,25 @@ var Pipsel = (() => {
       };
     }
     parseSourceNode() {
+      const startNode = this.parseSourceNodeRaw();
+      if (this.currentToken.type === "COALESCE") {
+        const sources = [startNode];
+        let end = startNode.loc.end;
+        while (this.currentToken.type === "COALESCE") {
+          this.consume("COALESCE");
+          const nextNode = this.parseSourceNodeRaw();
+          sources.push(nextNode);
+          end = nextNode.loc.end;
+        }
+        return {
+          type: "Coalesce",
+          sources,
+          loc: { start: startNode.loc.start, end }
+        };
+      }
+      return startNode;
+    }
+    parseSourceNodeRaw() {
       const token = this.currentToken;
       const start = token.start;
       if (token.type === "STRING") {
@@ -469,22 +525,29 @@ var Pipsel = (() => {
       return pipes;
     }
     parsePipe() {
-      const pipeNameToken = this.consume("IDENTIFIER");
+      const isOperator = this.currentToken.type === "OPERATOR";
+      const pipeNameToken = this.consume(isOperator ? "OPERATOR" : "IDENTIFIER");
       const name = pipeNameToken.value;
       const start = pipeNameToken.start;
       const args = [];
       let end = pipeNameToken.end;
-      if (this.currentToken.type === "LPAREN") {
-        this.consume("LPAREN");
-        if (this.currentToken.type !== "RPAREN") {
-          args.push(this.parseLiteral());
-          while (this.currentToken.type === "COMMA") {
-            this.consume("COMMA");
+      if (isOperator) {
+        const literal = this.parseLiteral();
+        args.push(literal);
+        end = literal.loc.end;
+      } else {
+        if (this.currentToken.type === "LPAREN") {
+          this.consume("LPAREN");
+          if (this.currentToken.type !== "RPAREN") {
             args.push(this.parseLiteral());
+            while (this.currentToken.type === "COMMA") {
+              this.consume("COMMA");
+              args.push(this.parseLiteral());
+            }
           }
+          const rparenToken = this.consume("RPAREN");
+          end = rparenToken.end;
         }
-        const rparenToken = this.consume("RPAREN");
-        end = rparenToken.end;
       }
       return {
         type: "Pipe",
@@ -590,6 +653,8 @@ var Pipsel = (() => {
         return `@${source.name}`;
       case "MatchSelector":
         return `@match("${escapeString(source.value)}")`;
+      case "Coalesce":
+        return source.sources.map(formatSourceNode).join(" ?? ");
     }
   }
   function formatField(def, indent) {
@@ -618,6 +683,10 @@ ${indent}}`;
     return `${indent}${def.name}: ${def.metaVariable}`;
   }
   function formatPipe(pipe) {
+    const OPERATORS = [">", "<", ">=", "<=", "==", "=", "!="];
+    if (OPERATORS.includes(pipe.name)) {
+      return ` | ${pipe.name} ${formatLiteral(pipe.args[0])}`;
+    }
     if (pipe.args.length === 0) {
       return ` | ${pipe.name}`;
     }
@@ -690,7 +759,45 @@ ${indent}}`;
     bool: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
     boolean: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
     fallback: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
-    filter: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false }
+    filter: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    url_parse: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    urlParse: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    url_protocol: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    urlProtocol: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    url_hostname: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    urlHostname: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    url_port: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    urlPort: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    url_pathname: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    urlPathname: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    url_path: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    urlPath: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    url_search: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    urlSearch: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    url_query: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    urlQuery: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    url_hash: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    urlHash: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    url_origin: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    urlOrigin: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    url_param: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    urlParam: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    url_resolve: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+    urlResolve: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+    url_join: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+    urlJoin: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+    unique: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+    json_parse: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    jsonParse: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    json: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+    ">": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    "<": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    ">=": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    "<=": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    "==": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    "=": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    "!=": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+    required: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false }
   };
   var ALLOWED_METAS = ["@url", "@timestamp", "@paginate"];
   function lint(source) {
@@ -745,38 +852,53 @@ ${indent}}`;
       }
     }
   }
-  function lintField(def, diagnostics) {
-    if (def.source.type === "Selector" && def.source.value.trim() === "") {
+  function isDomSource(source) {
+    if (source.type === "Coalesce") {
+      return source.sources.some(isDomSource);
+    }
+    return source.type !== "Meta";
+  }
+  function lintSourceNode(source, name, typeLabel, diagnostics) {
+    if (source.type === "Coalesce") {
+      for (const sub of source.sources) {
+        lintSourceNode(sub, name, typeLabel, diagnostics);
+      }
+      return;
+    }
+    if (source.type === "Selector" && source.value.trim() === "") {
       diagnostics.push({
-        message: `Empty selector for field '${def.name}'`,
+        message: `Empty selector for ${typeLabel} '${name}'`,
         severity: "error",
-        line: def.loc.start.line,
-        column: def.loc.start.column,
-        length: def.name.length
+        line: source.loc.start.line,
+        column: source.loc.start.column,
+        length: 1
       });
     }
-    if (def.source.type === "MatchSelector" && def.source.value.trim() === "") {
+    if (source.type === "MatchSelector" && source.value.trim() === "") {
       diagnostics.push({
-        message: `Empty match selector query for field '${def.name}'`,
+        message: `Empty match selector query for ${typeLabel} '${name}'`,
         severity: "error",
-        line: def.loc.start.line,
-        column: def.loc.start.column,
-        length: def.name.length
+        line: source.loc.start.line,
+        column: source.loc.start.column,
+        length: 1
       });
     }
-    if (def.source.type === "Meta") {
-      const metaVar = "@" + def.source.name;
+    if (source.type === "Meta") {
+      const metaVar = "@" + source.name;
       if (!ALLOWED_METAS.includes(metaVar)) {
         diagnostics.push({
           message: `Unknown or malformed meta variable '${metaVar}'. Supported values: ${ALLOWED_METAS.join(", ")}`,
           severity: "error",
-          line: def.source.loc.start.line,
-          column: def.source.loc.start.column,
+          line: source.loc.start.line,
+          column: source.loc.start.column,
           length: metaVar.length
         });
       }
     }
-    const isDom = def.source.type !== "Meta";
+  }
+  function lintField(def, diagnostics) {
+    lintSourceNode(def.source, def.name, "field", diagnostics);
+    const isDom = isDomSource(def.source);
     lintPipes(def.pipes, def.name, isDom, def.loc, diagnostics);
   }
   function lintPipes(pipes, name, isDomStart, defLoc, diagnostics) {
@@ -854,36 +976,7 @@ ${indent}}`;
     }
   }
   function lintList(def, diagnostics) {
-    if (def.source.type === "Selector" && def.source.value.trim() === "") {
-      diagnostics.push({
-        message: `Empty selector for list block '${def.name}'`,
-        severity: "error",
-        line: def.loc.start.line,
-        column: def.loc.start.column,
-        length: def.name.length
-      });
-    }
-    if (def.source.type === "MatchSelector" && def.source.value.trim() === "") {
-      diagnostics.push({
-        message: `Empty match selector query for list block '${def.name}'`,
-        severity: "error",
-        line: def.loc.start.line,
-        column: def.loc.start.column,
-        length: def.name.length
-      });
-    }
-    if (def.source.type === "Meta") {
-      const metaVar = "@" + def.source.name;
-      if (!ALLOWED_METAS.includes(metaVar)) {
-        diagnostics.push({
-          message: `Unknown or malformed meta variable '${metaVar}'. Supported values: ${ALLOWED_METAS.join(", ")}`,
-          severity: "error",
-          line: def.source.loc.start.line,
-          column: def.source.loc.start.column,
-          length: metaVar.length
-        });
-      }
-    }
+    lintSourceNode(def.source, def.name, "list block", diagnostics);
     if (def.body) {
       if (def.body.length === 0) {
         diagnostics.push({
@@ -896,7 +989,7 @@ ${indent}}`;
       }
       lintScope(def.body, diagnostics);
     } else if (def.pipes) {
-      const isDom = def.source.type !== "Meta";
+      const isDom = isDomSource(def.source);
       lintPipes(def.pipes, def.name, isDom, def.loc, diagnostics);
     }
   }

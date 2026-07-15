@@ -1,5 +1,5 @@
 import { parse } from "./parser.js";
-import { Program, Definition, Diagnostic, FieldDefinition, ListDefinition, MetaDefinition, Pipe } from "./types.js";
+import { Program, Definition, Diagnostic, FieldDefinition, ListDefinition, MetaDefinition, Pipe, SourceNode } from "./types.js";
 
 const BUILT_IN_PIPES = {
   // Extractors (DOM Selection -> Primitive)
@@ -59,6 +59,44 @@ const BUILT_IN_PIPES = {
   boolean: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
   fallback: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
   filter: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  url_parse: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  urlParse: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  url_protocol: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  urlProtocol: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  url_hostname: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  urlHostname: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  url_port: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  urlPort: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  url_pathname: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  urlPathname: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  url_path: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  urlPath: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  url_search: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  urlSearch: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  url_query: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  urlQuery: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  url_hash: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  urlHash: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  url_origin: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  urlOrigin: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  url_param: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  urlParam: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  url_resolve: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+  urlResolve: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+  url_join: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+  urlJoin: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+  unique: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+  json_parse: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  jsonParse: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  json: { minArgs: 0, maxArgs: 0, isExtractor: false, isTraversal: false },
+  ">": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  "<": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  ">=": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  "<=": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  "==": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  "=": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  "!=": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  required: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
 };
 
 const ALLOWED_METAS = ["@url", "@timestamp", "@paginate"];
@@ -124,44 +162,60 @@ function lintScope(definitions: Definition[], diagnostics: Diagnostic[]): void {
     }
   }
 }
-function lintField(def: FieldDefinition, diagnostics: Diagnostic[]): void {
-  // 1. Check empty source selector
-  if (def.source.type === "Selector" && def.source.value.trim() === "") {
+function isDomSource(source: SourceNode): boolean {
+  if (source.type === "Coalesce") {
+    return source.sources.some(isDomSource);
+  }
+  return source.type !== "Meta";
+}
+
+function lintSourceNode(source: SourceNode, name: string, typeLabel: "field" | "list block", diagnostics: Diagnostic[]): void {
+  if (source.type === "Coalesce") {
+    for (const sub of source.sources) {
+      lintSourceNode(sub, name, typeLabel, diagnostics);
+    }
+    return;
+  }
+
+  if (source.type === "Selector" && source.value.trim() === "") {
     diagnostics.push({
-      message: `Empty selector for field '${def.name}'`,
+      message: `Empty selector for ${typeLabel} '${name}'`,
       severity: "error",
-      line: def.loc.start.line,
-      column: def.loc.start.column,
-      length: def.name.length,
+      line: source.loc.start.line,
+      column: source.loc.start.column,
+      length: 1,
     });
   }
 
-  if (def.source.type === "MatchSelector" && def.source.value.trim() === "") {
+  if (source.type === "MatchSelector" && source.value.trim() === "") {
     diagnostics.push({
-      message: `Empty match selector query for field '${def.name}'`,
+      message: `Empty match selector query for ${typeLabel} '${name}'`,
       severity: "error",
-      line: def.loc.start.line,
-      column: def.loc.start.column,
-      length: def.name.length,
+      line: source.loc.start.line,
+      column: source.loc.start.column,
+      length: 1,
     });
   }
 
-  // 1b. Check meta source variable
-  if (def.source.type === "Meta") {
-    const metaVar = "@" + def.source.name;
+  if (source.type === "Meta") {
+    const metaVar = "@" + source.name;
     if (!ALLOWED_METAS.includes(metaVar)) {
       diagnostics.push({
         message: `Unknown or malformed meta variable '${metaVar}'. Supported values: ${ALLOWED_METAS.join(", ")}`,
         severity: "error",
-        line: def.source.loc.start.line,
-        column: def.source.loc.start.column,
+        line: source.loc.start.line,
+        column: source.loc.start.column,
         length: metaVar.length,
       });
     }
   }
+}
+
+function lintField(def: FieldDefinition, diagnostics: Diagnostic[]): void {
+  lintSourceNode(def.source, def.name, "field", diagnostics);
 
   // 2. Check pipe functions
-  const isDom = def.source.type !== "Meta";
+  const isDom = isDomSource(def.source);
   lintPipes(def.pipes, def.name, isDom, def.loc, diagnostics);
 }
 
@@ -253,40 +307,7 @@ function lintPipes(pipes: Pipe[], name: string, isDomStart: boolean, defLoc: any
 }
 
 function lintList(def: ListDefinition, diagnostics: Diagnostic[]): void {
-  // Check empty selector
-  if (def.source.type === "Selector" && def.source.value.trim() === "") {
-    diagnostics.push({
-      message: `Empty selector for list block '${def.name}'`,
-      severity: "error",
-      line: def.loc.start.line,
-      column: def.loc.start.column,
-      length: def.name.length,
-    });
-  }
-
-  if (def.source.type === "MatchSelector" && def.source.value.trim() === "") {
-    diagnostics.push({
-      message: `Empty match selector query for list block '${def.name}'`,
-      severity: "error",
-      line: def.loc.start.line,
-      column: def.loc.start.column,
-      length: def.name.length,
-    });
-  }
-
-  // Check meta source variable
-  if (def.source.type === "Meta") {
-    const metaVar = "@" + def.source.name;
-    if (!ALLOWED_METAS.includes(metaVar)) {
-      diagnostics.push({
-        message: `Unknown or malformed meta variable '${metaVar}'. Supported values: ${ALLOWED_METAS.join(", ")}`,
-        severity: "error",
-        line: def.source.loc.start.line,
-        column: def.source.loc.start.column,
-        length: metaVar.length,
-      });
-    }
-  }
+  lintSourceNode(def.source, def.name, "list block", diagnostics);
 
   if (def.body) {
     // Check invalid list blocks (empty body)
@@ -304,7 +325,7 @@ function lintList(def: ListDefinition, diagnostics: Diagnostic[]): void {
     lintScope(def.body, diagnostics);
   } else if (def.pipes) {
     // Lint pipes for primitive list
-    const isDom = def.source.type !== "Meta";
+    const isDom = isDomSource(def.source);
     lintPipes(def.pipes, def.name, isDom, def.loc, diagnostics);
   }
 }

@@ -17,6 +17,8 @@ export type TokenType =
   | "SELF"
   | "PARENT"
   | "ROOT"
+  | "OPERATOR"
+  | "COALESCE"
   | "EOF";
 
 export interface Token {
@@ -74,7 +76,49 @@ export class Lexer {
       return { type: "EOF", value: "", start, end: start };
     }
 
-    // Two/three character tokens: `?:` or `[]:`
+    // Two-character operators
+    if (char === ">" && this.source[this.offset + 1] === "=") {
+      this.nextChar();
+      this.nextChar();
+      return { type: "OPERATOR", value: ">=", start, end: this.currentPos() };
+    }
+    if (char === "<" && this.source[this.offset + 1] === "=") {
+      this.nextChar();
+      this.nextChar();
+      return { type: "OPERATOR", value: "<=", start, end: this.currentPos() };
+    }
+    if (char === "=" && this.source[this.offset + 1] === "=") {
+      this.nextChar();
+      this.nextChar();
+      return { type: "OPERATOR", value: "==", start, end: this.currentPos() };
+    }
+    if (char === "!" && this.source[this.offset + 1] === "=") {
+      this.nextChar();
+      this.nextChar();
+      return { type: "OPERATOR", value: "!=", start, end: this.currentPos() };
+    }
+
+    // Single-character operators
+    if (char === ">") {
+      this.nextChar();
+      return { type: "OPERATOR", value: ">", start, end: this.currentPos() };
+    }
+    if (char === "<") {
+      this.nextChar();
+      return { type: "OPERATOR", value: "<", start, end: this.currentPos() };
+    }
+    if (char === "=") {
+      this.nextChar();
+      return { type: "OPERATOR", value: "=", start, end: this.currentPos() };
+    }
+
+    // Two/three character tokens: `?:`, `??` or `[]:`
+    if (char === "?" && this.source[this.offset + 1] === "?") {
+      this.nextChar(); // consume '?'
+      this.nextChar(); // consume '?'
+      return { type: "COALESCE", value: "??", start, end: this.currentPos() };
+    }
+
     if (char === "?" && this.source[this.offset + 1] === ":") {
       this.nextChar(); // consume '?'
       this.nextChar(); // consume ':'

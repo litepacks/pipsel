@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import * as fs from "fs/promises";
 import { glob } from "glob";
-import { parse, execute, format, lint } from "./index.js";
+import { parse, execute, format, lint, explain } from "./index.js";
 
 const program = new Command();
 
@@ -125,6 +125,21 @@ program
       }
     } catch (err: any) {
       console.error(`Linting error: ${err.message}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("explain <file>")
+  .description("Prints a visual tree representation of each field's pipeline")
+  .action(async (file) => {
+    try {
+      const content = await fs.readFile(file, "utf-8");
+      const ast = parse(content);
+      const output = explain(ast);
+      console.log(output);
+    } catch (err: any) {
+      console.error(`Explanation error: ${err.message}`);
       process.exit(1);
     }
   });

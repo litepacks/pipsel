@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parse, format, lint, execute } from "../src/index.js";
+import { parse, format, lint, execute, explain } from "../src/index.js";
 import "../src/browser.js";
 
 const mockHtml = `
@@ -831,6 +831,400 @@ d: @url
 
     // Import browser entry to cover its export statements
     await import("../src/browser.js");
+  });
+});
+
+describe("URL Parse & Utility Pipes", () => {
+  it("should lint URL pipes correctly", () => {
+    const validPsl = `
+      urlObj: @url | url_parse
+      host: @url | url_hostname
+      path: @url | url_pathname
+      param: @url | url_param("q")
+      resolved: @url | url_resolve("https://example.com")
+    `;
+    const diagnostics = lint(validPsl);
+    expect(diagnostics).toHaveLength(0);
+
+    const invalidPsl = `
+      host: @url | url_hostname("invalid_arg")
+      param: @url | url_param
+      resolved: @url | url_resolve("a", "b")
+    `;
+    const invalidDiagnostics = lint(invalidPsl);
+    expect(invalidDiagnostics.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("should execute URL pipes correctly", () => {
+    const psl = `
+      parsed: @url | url_parse
+      protocol: @url | url_protocol
+      hostname: @url | url_hostname
+      port: @url | url_port
+      path: @url | url_pathname
+      search: @url | url_search
+      hash: @url | url_hash
+      origin: @url | url_origin
+      q: @url | url_param("q")
+      ref: @url | url_param("ref")
+      resolved_relative: "a" | attr("href") | url_resolve
+      resolved_custom: "a" | attr("href") | url_resolve("https://custom.com/base/")
+    `;
+
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: '<a href="/about?ref=link#team">About</a>',
+      url: "https://example.com:8080/path/to/page?q=test#sec"
+    });
+
+    expect(result.protocol).toBe("https:");
+    expect(result.hostname).toBe("example.com");
+    expect(result.port).toBe("8080");
+    expect(result.path).toBe("/path/to/page");
+    expect(result.search).toBe("?q=test");
+    expect(result.hash).toBe("#sec");
+    expect(result.origin).toBe("https://example.com:8080");
+    expect(result.q).toBe("test");
+    expect(result.ref).toBeNull();
+
+    expect(result.parsed).toEqual({
+      href: "https://example.com:8080/path/to/page?q=test#sec",
+      protocol: "https:",
+      hostname: "example.com",
+      port: "8080",
+      pathname: "/path/to/page",
+      search: "?q=test",
+      hash: "#sec",
+      origin: "https://example.com:8080",
+      params: { q: "test" }
+    });
+
+    expect(result.resolved_relative).toBe("https://example.com:8080/about?ref=link#team");
+    expect(result.resolved_custom).toBe("https://custom.com/about?ref=link#team");
+  });
+
+  it("should handle edge cases like malformed URLs gracefully", () => {
+    const psl = `
+      bad_parsed: @url | url_parse
+      bad_host: @url | url_hostname
+      bad_resolved: "a" | attr("href") | url_resolve
+    `;
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: '<a href="invalid_url">link</a>',
+      url: "not-a-valid-url"
+    });
+
+    expect(result.bad_parsed).toBeNull();
+    expect(result.bad_host).toBeNull();
+    expect(result.bad_resolved).toBe("invalid_url");
+  });
+});
+
+describe("Array & JSON Utility Pipes", () => {
+  it("should lint unique and json_parse correctly", () => {
+    const validPsl = `
+      uniq_tags: ".tags" | text | split(",") | unique
+      uniq_objs: "script" | text | json_parse | unique("id")
+    `;
+    const diagnostics = lint(validPsl);
+    expect(diagnostics).toHaveLength(0);
+
+    const invalidPsl = `
+      uniq_err: ".tags" | text | unique("a", "b")
+      json_err: "script" | text | json_parse("extra")
+    `;
+    const invalidDiagnostics = lint(invalidPsl);
+    expect(invalidDiagnostics.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("should execute unique on primitive arrays", () => {
+    const psl = `
+      uniq_vals: ".numbers" | text | split(",") | unique
+    `;
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: '<div class="numbers">1,2,2,3,1,4</div>'
+    });
+    expect(result.uniq_vals).toEqual(["1", "2", "3", "4"]);
+  });
+
+  it("should execute unique on object arrays using a key", () => {
+    const psl = `
+      uniq_objs: "script#data" | text | json_parse | unique("id")
+    `;
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: `<script id="data">[{"id": 1, "name": "Apple"}, {"id": 2, "name": "Banana"}, {"id": 1, "name": "Red Apple"}]</script>`
+    });
+    expect(result.uniq_objs).toEqual([
+      { id: 1, name: "Apple" },
+      { id: 2, name: "Banana" }
+    ]);
+  });
+
+  it("should handle non-array and malformed inputs gracefully", () => {
+    const psl = `
+      non_arr: "div" | text | unique
+      bad_json: "script#bad" | text | json_parse
+    `;
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: `
+        <div>not-an-array</div>
+        <script id="bad">{invalid-json}</script>
+      `
+    });
+    expect(result.non_arr).toBe("not-an-array");
+    expect(result.bad_json).toBeNull();
+  });
+});
+
+describe("Pipsel DSL Explain Function", () => {
+  it("should generate a correct visual tree representation of PSL rules", () => {
+    const source = `
+      title: "h1" | text | trim
+      price?: ".price" | text | replace("$","") | float
+      items[]: ".card" {
+        name: "h2" | text
+      }
+      source_url: @url
+    `;
+    const ast = parse(source);
+    const tree = explain(ast);
+
+    const expected = [
+      "title",
+      "└── h1",
+      "    ├── text",
+      "    └── trim",
+      "",
+      "price?",
+      "└── .price",
+      "    ├── text",
+      '    ├── replace("$","")',
+      "    └── float",
+      "",
+      "items[]",
+      "└── .card",
+      "    └── name",
+      "        └── h2",
+      "            └── text",
+      "",
+      "source_url",
+      "└── @url"
+    ].join("\n");
+
+    expect(tree).toBe(expected);
+  });
+});
+
+describe("Comparison Operator Pipes", () => {
+  it("should lint comparison operators correctly", () => {
+    const validPsl = `
+      val1: ".price" | text | float | > 10
+      val2: ".price" | text | float | <= 20
+      val3: ".status" | text | == "active"
+    `;
+    const diagnostics = lint(validPsl);
+    expect(diagnostics).toHaveLength(0);
+
+    const invalidPsl = `
+      val1: ".price" | text | float | >(10, 20)
+    `;
+    const invalidDiagnostics = lint(invalidPsl);
+    expect(invalidDiagnostics.length).toBeGreaterThanOrEqual(1);
+    
+    // Invalid operator syntax check (missing literal)
+    expect(() => parse(`val: ".price" | <`)).toThrow();
+  });
+
+  it("should format comparison operators correctly", () => {
+    const source = `val:".price"|text|float|>10`;
+    const expected = `val: ".price" | text | float | > 10`;
+    expect(format(source)).toBe(expected);
+  });
+
+  it("should execute comparison operators correctly", () => {
+    const psl = `
+      gt_true: ".p1" | text | float | > 10
+      gt_false: ".p2" | text | float | > 10
+      lt_true: ".p1" | text | float | < 20
+      lt_false: ".p2" | text | float | < 2
+      ge_true1: ".p1" | text | float | >= 15
+      ge_true2: ".p1" | text | float | >= 10
+      le_true1: ".p1" | text | float | <= 15
+      le_true2: ".p1" | text | float | <= 20
+      eq_true1: ".p1" | text | float | == 15
+      eq_true2: ".p1" | text | float | = 15
+      eq_false: ".p1" | text | float | == 20
+      ne_true: ".p1" | text | float | != 20
+      ne_false: ".p1" | text | float | != 15
+      str_gt: ".s1" | text | > "apple"
+      str_eq: ".s1" | text | == "banana"
+    `;
+
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: `
+        <span class="p1">15</span>
+        <span class="p2">5</span>
+        <span class="s1">banana</span>
+      `
+    });
+
+    expect(result.gt_true).toBe(true);
+    expect(result.gt_false).toBe(false);
+    expect(result.lt_true).toBe(true);
+    expect(result.lt_false).toBe(false);
+    expect(result.ge_true1).toBe(true);
+    expect(result.ge_true2).toBe(true);
+    expect(result.le_true1).toBe(true);
+    expect(result.le_true2).toBe(true);
+    expect(result.eq_true1).toBe(true);
+    expect(result.eq_true2).toBe(true);
+    expect(result.eq_false).toBe(false);
+    expect(result.ne_true).toBe(true);
+    expect(result.ne_false).toBe(false);
+    expect(result.str_gt).toBe(true);
+    expect(result.str_eq).toBe(true);
+  });
+
+  it("should explain comparison operators correctly", () => {
+    const source = `price: ".price" | float | > 10`;
+    const ast = parse(source);
+    const tree = explain(ast);
+    const expected = [
+      "price",
+      "└── .price",
+      "    ├── float",
+      "    └── > 10"
+    ].join("\n");
+    expect(tree).toBe(expected);
+  });
+});
+
+describe("Selector Nullish Coalescing (??)", () => {
+  it("should lint coalescing selectors correctly", () => {
+    const validPsl = `
+      val1: "h1" ?? ".alternative" | text
+      val2: "h2" ?? "h3" ?? ".fallback" | text
+      val3: @url ?? "a" | text
+    `;
+    const diagnostics = lint(validPsl);
+    expect(diagnostics).toHaveLength(0);
+
+    const invalidPsl = `
+      val1: "" ?? ".alt" | text
+    `;
+    const invalidDiagnostics = lint(invalidPsl);
+    expect(invalidDiagnostics.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should format coalescing selectors correctly", () => {
+    const source = `val:"h1"??"h2"|text`;
+    const expected = `val: "h1" ?? "h2" | text`;
+    expect(format(source)).toBe(expected);
+  });
+
+  it("should execute coalescing selectors correctly", () => {
+    const psl = `
+      first_match: "h1" ?? ".alt" | text | trim
+      second_match: "h2" ?? ".alt" | text | trim
+      third_match: "h2" ?? "h3" ?? ".card span" | text | trim
+      no_match: "h2" ?? "h3" ?? "h4" | text | fallback("Default")
+      meta_match: @url ?? "h1" | text | trim
+    `;
+
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: `
+        <div>
+          <h1>Primary Title</h1>
+          <div class="alt">Alternative Title</div>
+          <div class="card"><span>Card Content</span></div>
+        </div>
+      `,
+      url: ""
+    });
+
+    expect(result.first_match).toBe("Primary Title");
+    expect(result.second_match).toBe("Alternative Title");
+    expect(result.third_match).toBe("Card Content");
+    expect(result.no_match).toBe("Default");
+    expect(result.meta_match).toBe("Primary Title");
+  });
+
+  it("should explain coalescing selectors correctly", () => {
+    const source = `title: "h1" ?? "h2" | text`;
+    const ast = parse(source);
+    const tree = explain(ast);
+    const expected = [
+      "title",
+      "└── h1 ?? h2",
+      "    └── text"
+    ].join("\n");
+    expect(tree).toBe(expected);
+  });
+});
+
+describe("Required Validation Pipe", () => {
+  it("should lint required pipes correctly", () => {
+    const validPsl = `
+      val1: "h1" | text | required
+      val2: "h1" | text | required("Custom Error")
+    `;
+    const diagnostics = lint(validPsl);
+    expect(diagnostics).toHaveLength(0);
+
+    const invalidPsl = `
+      val1: "h1" | text | required("a", "b")
+    `;
+    const invalidDiagnostics = lint(invalidPsl);
+    expect(invalidDiagnostics.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should pass execution when field value is present", () => {
+    const psl = `
+      title: "h1" | text | required
+    `;
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: "<h1>Title Present</h1>"
+    });
+    expect(result.title).toBe("Title Present");
+  });
+
+  it("should throw error when selector matches no elements", () => {
+    const psl = `
+      title: ".missing-class" | text | required
+    `;
+    const ast = parse(psl);
+    expect(() => execute(ast, { html: "<div></div>" })).toThrow("Required field validation failed");
+  });
+
+  it("should throw error when value resolves to empty string", () => {
+    const psl = `
+      title: "h1" | text | trim | required
+    `;
+    const ast = parse(psl);
+    expect(() => execute(ast, { html: "<h1>   </h1>" })).toThrow("Required field validation failed");
+  });
+
+  it("should throw custom error message if provided", () => {
+    const psl = `
+      title: "h1" | text | required("Custom message: Title is mandatory!")
+    `;
+    const ast = parse(psl);
+    expect(() => execute(ast, { html: "<div></div>" })).toThrow("Custom message: Title is mandatory!");
+  });
+
+  it("should throw error on empty list blocks", () => {
+    const psl = `
+      tags[]: ".tags a" | text | required
+    `;
+    const ast = parse(psl);
+    expect(() => execute(ast, { html: "<div></div>" })).toThrow("Required field validation failed");
   });
 });
 

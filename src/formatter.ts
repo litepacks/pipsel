@@ -82,6 +82,8 @@ function formatSourceNode(source: SourceNode): string {
       return `@${source.name}`;
     case "MatchSelector":
       return `@match("${escapeString(source.value)}")`;
+    case "Coalesce":
+      return source.sources.map(formatSourceNode).join(" ?? ");
   }
 }
 
@@ -115,6 +117,11 @@ function formatMeta(def: MetaDefinition, indent: string): string {
 }
 
 function formatPipe(pipe: Pipe): string {
+  const OPERATORS = [">", "<", ">=", "<=", "==", "=", "!="];
+  if (OPERATORS.includes(pipe.name)) {
+    return ` | ${pipe.name} ${formatLiteral(pipe.args[0])}`;
+  }
+
   if (pipe.args.length === 0) {
     return ` | ${pipe.name}`;
   }
