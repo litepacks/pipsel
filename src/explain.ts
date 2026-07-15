@@ -5,7 +5,7 @@ interface TreeNode {
   children: TreeNode[];
 }
 
-function getSourceLabel(source: SourceNode): string {
+export function getSourceLabel(source: SourceNode): string {
   switch (source.type) {
     case "Selector":
       return source.value;

@@ -165,6 +165,76 @@ console.log(formatted);
 // 3. Parsing (Produces an Abstract Syntax Tree)
 const ast = parse(dslSource);
 console.log(JSON.stringify(ast, null, 2));
+
+// 4. Execution (Extracts structured data from HTML)
+import { execute } from "pipsel";
+const data = execute(ast, {
+  html: "<h1>Hello World</h1>",
+  url: "https://example.com"
+});
+console.log(data); // { title: "Hello World" }
+```
+
+### Browser Page Execution (Playwright & Puppeteer)
+
+Pipsel supports extracting structured data directly from headless browser pages using Playwright or Puppeteer. The `pipsel(...)` wrapper accepts Pages, Locators, and ElementHandles.
+
+#### Playwright Integration
+
+##### Page-level execution:
+```typescript
+import { chromium } from "playwright";
+import { pipsel } from "pipsel";
+
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto("https://example.com");
+
+// Run inline Pipsel script
+const result = await pipsel(page).run(`
+  title: "h1" | text | trim
+`);
+console.log(result); // { title: "Example Domain" }
+
+await browser.close();
+```
+
+##### Relative Locator execution (returns array of results):
+```typescript
+import { chromium } from "playwright";
+import { pipsel } from "pipsel";
+
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto("https://example.com/products");
+
+// Extract cards relative to locator
+const cards = page.locator(".product-card");
+const products = await pipsel(cards).run(`
+  title: ".product-title" | text | trim
+  price: ".price" | text | float
+`);
+console.log(products); // [ { title: "MacBook", price: 1999 }, ... ]
+
+await browser.close();
+```
+
+#### Puppeteer Integration
+
+##### Page-level execution:
+```typescript
+import puppeteer from "puppeteer";
+import { pipsel } from "pipsel";
+
+const browser = await puppeteer.launch();
+const page = await browser.newPage();
+await page.goto("https://example.com");
+
+// Run from a rules file
+const result = await pipsel(page).extract("product.psl");
+console.log(result);
+
+await browser.close();
 ```
 
 ---

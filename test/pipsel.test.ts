@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parse, format, lint, execute, explain } from "../src/index.js";
+import { parse, format, lint, execute, explain, executePlaywright, executePuppeteer, pipsel } from "../src/index.js";
 import "../src/browser.js";
 
 const mockHtml = `
@@ -1225,6 +1225,420 @@ describe("Required Validation Pipe", () => {
     `;
     const ast = parse(psl);
     expect(() => execute(ast, { html: "<div></div>" })).toThrow("Required field validation failed");
+  });
+});
+
+describe("Browser Execution Helpers (Playwright & Puppeteer)", () => {
+  it("should execute rules against a mocked Playwright page", async () => {
+    const psl = `
+      title: "h1" | text | trim
+      url: @url
+    `;
+    const ast = parse(psl);
+
+    const mockPlaywrightPage = {
+      content: async () => "<h1>Playwright Title</h1>",
+      url: () => "https://example.com/playwright"
+    };
+
+    const result = await executePlaywright(ast, mockPlaywrightPage);
+    expect(result.title).toBe("Playwright Title");
+    expect(result.url).toBe("https://example.com/playwright");
+  });
+
+  it("should execute rules against a mocked Puppeteer page", async () => {
+    const psl = `
+      title: "h1" | text | trim
+      url: @url
+    `;
+    const ast = parse(psl);
+
+    const mockPuppeteerPage = {
+      content: async () => "<h1>Puppeteer Title</h1>",
+      url: () => "https://example.com/puppeteer"
+    };
+
+    const result = await executePuppeteer(ast, mockPuppeteerPage);
+    expect(result.title).toBe("Puppeteer Title");
+    expect(result.url).toBe("https://example.com/puppeteer");
+  });
+});
+
+describe("Fluent Wrapper API (pipsel)", () => {
+  it("should support execute playwright page with run, explain, and debug", async () => {
+    const pageObj = {
+      content: async () => `<html><body><h1>Hello Playwright</h1></body></html>`,
+      url: () => "https://example.com/playwright"
+    };
+
+    const runner = pipsel(pageObj);
+
+    // 1. run
+    const result = await runner.run("title: 'h1' | text | trim");
+    expect(result).toEqual({ title: "Hello Playwright" });
+
+    // 2. explain
+    const tree = await runner.explain("title: 'h1' | text");
+    expect(tree).toContain("title");
+    expect(tree).toContain("h1");
+
+    // 3. debug
+    const logs = await runner.debug("title: 'h1' | text | trim");
+    expect(logs).toContain("Field: title");
+    expect(logs).toContain("✓ h1");
+    expect(logs).toContain("→ Hello Playwright");
+  });
+
+  it("should support execute Playwright locator (multi-element selector)", async () => {
+    const mockLocator = {
+      evaluateAll: async (fn: any) => {
+        const els = [
+          { outerHTML: '<div class="product"><span class="title">Product A</span></div>' },
+          { outerHTML: '<div class="product"><span class="title">Product B</span></div>' }
+        ];
+        return fn(els);
+      },
+      page: () => ({
+        url: () => "https://example.com/products"
+      })
+    };
+
+    const runner = pipsel(mockLocator);
+    const results = await runner.run("title: '.title' | text | trim");
+    expect(results).toEqual([
+      { title: "Product A" },
+      { title: "Product B" }
+    ]);
+  });
+
+  it("should support execute Puppeteer ElementHandle (single element)", async () => {
+    const mockElement = {
+      evaluate: async (fn: any) => {
+        const el = { outerHTML: '<div class="product"><span class="title">Item 1</span></div>' };
+        return fn(el);
+      }
+    };
+
+    const runner = pipsel(mockElement);
+    const result = await runner.run("title: '.title' | text | trim");
+    expect(result).toEqual({ title: "Item 1" });
+  });
+
+  it("should support execute Puppeteer collection (Array of ElementHandles)", async () => {
+    const mockElements = [
+      {
+        evaluate: async (fn: any) => fn({ outerHTML: '<div class="prod">A</div>' })
+      },
+      {
+        evaluate: async (fn: any) => fn({ outerHTML: '<div class="prod">B</div>' })
+      }
+    ];
+
+    const runner = pipsel(mockElements);
+    const results = await runner.run("name: '.prod' | text");
+    expect(results).toEqual([
+      { name: "A" },
+      { name: "B" }
+    ]);
+  });
+
+  it("should support extract from file for Page, Locator, ElementHandle, and Collections", async () => {
+    const fs = await import("fs");
+    fs.writeFileSync("test-extract.psl", "title: 'h1' | text | trim");
+
+    try {
+      const pageObj = {
+        content: async () => `<h1>File Title</h1>`,
+        url: () => "https://example.com"
+      };
+      
+      const locatorObj = {
+        evaluateAll: async (fn: any) => fn([{ outerHTML: '<h1>File Locator</h1>' }]),
+        page: () => ({ url: () => "" })
+      };
+
+      const elementObj = {
+        evaluate: async (fn: any) => fn({ outerHTML: '<h1>File Element</h1>' })
+      };
+
+      const collectionObj = [
+        { evaluate: async (fn: any) => fn({ outerHTML: '<h1>File Collection</h1>' }) }
+      ];
+
+      expect(await pipsel(pageObj).extract("test-extract.psl")).toEqual({ title: "File Title" });
+      expect(await pipsel(locatorObj).extract("test-extract.psl")).toEqual([{ title: "File Locator" }]);
+      expect(await pipsel(elementObj).extract("test-extract.psl")).toEqual({ title: "File Element" });
+      expect(await pipsel(collectionObj).extract("test-extract.psl")).toEqual([{ title: "File Collection" }]);
+    } finally {
+      if (fs.existsSync("test-extract.psl")) {
+        fs.unlinkSync("test-extract.psl");
+      }
+    }
+  });
+
+  it("should support explain and debug on Locator, ElementHandle, and Collections", async () => {
+    const locatorObj = {
+      evaluateAll: async (fn: any) => fn([{ outerHTML: '<h1>Locator</h1>' }]),
+      page: () => ({ url: () => "" })
+    };
+
+    const elementObj = {
+      evaluate: async (fn: any) => fn({ outerHTML: '<h1>Element</h1>' })
+    };
+
+    const collectionObj = [
+      { evaluate: async (fn: any) => fn({ outerHTML: '<h1>Collection</h1>' }) }
+    ];
+
+    expect(await pipsel(locatorObj).explain("title: 'h1'")).toContain("title");
+    expect(await pipsel(elementObj).explain("title: 'h1'")).toContain("title");
+    expect(await pipsel(collectionObj).explain("title: 'h1'")).toContain("title");
+
+    const d1 = await pipsel(locatorObj).debug("title: 'h1' | text");
+    expect(d1).toContain("Element #1");
+    expect(d1).toContain("✓ h1");
+
+    const d2 = await pipsel(elementObj).debug("title: 'h1' | text");
+    expect(d2).toContain("✓ h1");
+
+    const d3 = await pipsel(collectionObj).debug("title: 'h1' | text");
+    expect(d3).toContain("Element #1");
+    expect(d3).toContain("✓ h1");
+  });
+
+  it("should support debug on primitive list blocks", async () => {
+    const pageObj = {
+      content: async () => `<html><body><div class="tags"><a>tech</a><a>gadgets</a></div></body></html>`,
+      url: () => ""
+    };
+    const psl = `tags[]: ".tags a" | text | trim`;
+    const logs = await pipsel(pageObj).debug(psl);
+    expect(logs).toContain("Primitive List");
+    expect(logs).toContain("Item #1");
+    expect(logs).toContain("✓ text");
+    expect(logs).toContain("→ tech");
+  });
+
+  it("should support debug on JSON parsed objects", async () => {
+    const pageObj = {
+      content: async () => `<html><body><script>{"id":123}</script></body></html>`,
+      url: () => ""
+    };
+    const psl = `metadata: "script" | text | json`;
+    const logs = await pipsel(pageObj).debug(psl);
+    expect(logs).toContain('{"id":123}');
+  });
+
+  it("should throw errors on invalid pipsel targets", () => {
+    expect(() => pipsel(null)).toThrow("target is required");
+    expect(() => pipsel({})).toThrow("target must be a Playwright");
+  });
+});
+
+describe("Edge Cases for 100% Coverage", () => {
+  it("should cover explain edge cases for other source node types", async () => {
+    const { getSourceLabel } = await import("../src/explain.js");
+    
+    // Test direct getSourceLabel fallback
+    expect(getSourceLabel({ type: "InvalidType" } as any)).toBe("");
+
+    const psl = `
+      val1: self | text
+      val2: parent | text
+      val3: root | text
+      val4: @url | url_hostname
+      val4b: @url
+      val5: @match("class-name") | text
+      val6: "h1" | round(2)
+      tags[]: ".tags a" | text
+    `;
+    const ast = parse(psl);
+    const tree = explain(ast);
+    expect(tree).toContain("self");
+    expect(tree).toContain("parent");
+    expect(tree).toContain("root");
+    expect(tree).toContain("@url");
+    expect(tree).toContain('@match("class-name")');
+    expect(tree).toContain("round(2)");
+  });
+
+  it("should cover linter primitive list edge cases", () => {
+    const psl = `
+      tags[]: ".tags a" | text | trim
+      my_meta: @url
+    `;
+    const diagnostics = lint(psl);
+    expect(diagnostics).toHaveLength(0);
+
+    // Trigger branch for duplicate extractor warning in lintPipes
+    const invalidPsl = `val: "h1" | text | text`;
+    const invalidDiag = lint(invalidPsl);
+    expect(invalidDiag.length).toBeGreaterThan(0);
+  });
+
+  it("should cover numeric and mathematical edge cases in executor", () => {
+    const html = `
+      <div id="nan">Not a number</div>
+      <div id="nums">10</div>
+      <script>{"foo":"bar"}</script>
+      <span class="empty-span"></span>
+      <div class="list-nums">5</div>
+      <div class="list-nums">10</div>
+    `;
+
+    const pslNan = `
+      r_nan: "#nan" | text | round
+      add_nan: "#nan" | text | add(5)
+      sub_nan: "#nan" | text | subtract(5)
+      mul_nan: "#nan" | text | multiply(5)
+      div_nan: "#nan" | text | divide(5)
+      div_zero: "#nums" | text | float | divide(0)
+    `;
+    const result1 = execute(parse(pslNan), { html });
+    expect(result1.r_nan).toBeNull();
+    expect(result1.add_nan).toBeNull();
+    expect(result1.sub_nan).toBeNull();
+    expect(result1.mul_nan).toBeNull();
+    expect(result1.div_nan).toBeNull();
+    expect(result1.div_zero).toBeNull();
+
+    const pslBool = `
+      b_bool: "#nums" | text | float | > 5 | bool
+      b_arr: "#nums" | text | split(",") | bool
+      b_str: "#nums" | text | trim | bool
+      b_obj: "script" | text | json | bool
+      b_empty: ".empty-span" | text | trim | bool
+      sum_list[]: ".list-nums" | text | float | sum
+    `;
+    const result2 = execute(parse(pslBool), { html });
+    expect(result2.b_bool).toBe(true);
+    expect(result2.b_arr).toBe(true);
+    expect(result2.b_str).toBe(true);
+    expect(result2.b_obj).toBe(true);
+    expect(result2.b_empty).toBe(false);
+    expect(result2.sum_list).toEqual([15]);
+
+    const pslMinMax = `
+      empty_min: "#nan" | text | split(",") | min
+      empty_max: "#nan" | text | split(",") | max
+    `;
+    const result3 = execute(parse(pslMinMax), { html });
+    expect(result3.empty_min).toBeNull();
+    expect(result3.empty_max).toBeNull();
+  });
+
+  it("should cover URL parsing, unique, and JSON parse edge cases in executor", () => {
+    const originalToISOString = Date.prototype.toISOString;
+    Date.prototype.toISOString = function() { return 42 as any; };
+
+    try {
+      const psl = `
+        invalid_url: @url | url_param("q")
+        url_no_base: "a" | attr("href") | url_resolve
+        hostname_no_base: "a" | attr("href") | url_hostname
+        unique_prims: "span" | text | split(",") | unique("id")
+        json_null: @nonexistent | json
+        coalesce_meta: @timestamp ?? "default"
+        coalesce_null: @nonexistent ?? "span"
+        list_traversal[]: "span" | parent | find("a") | text | trim
+        list_with_unique_traversal[]: "span" | parent | find("a") | text | unique
+        catch_url: "a" | attr("href") | url_hostname
+        invalid_resolve: "span" | text | url_resolve
+        resolve_null: @nonexistent | url_resolve
+        hostname_null: @nonexistent | url_hostname
+        empty_match: @match("") | text
+      `;
+      const result = execute(parse(psl), {
+        html: `<div><a href="https://example.com/hello">Link</a><span>a,b,a</span></div>`,
+        url: "invalid-base-url"
+      });
+      expect(result.invalid_url).toBeNull();
+      expect(result.url_no_base).toBe("https://example.com/hello");
+      expect(result.hostname_no_base).toBe("example.com");
+      expect(result.unique_prims).toEqual(["a", "b"]);
+      expect(result.json_null).toBeNull();
+      expect(result.coalesce_meta).toBe(42);
+      expect(result.coalesce_null).toBe("a,b,a");
+      expect(result.list_traversal).toEqual(["Link"]);
+      expect(result.list_with_unique_traversal).toEqual(["Link"]);
+      expect(result.catch_url).toBe("example.com");
+      expect(result.invalid_resolve).toBe("a,b,a");
+      expect(result.resolve_null).toBeNull();
+      expect(result.hostname_null).toBeNull();
+      expect(result.empty_match).toBeNull();
+    } finally {
+      Date.prototype.toISOString = originalToISOString;
+    }
+  });
+
+  it("should cover semantic match scoring branches in executor", () => {
+    const html = `
+      <div class="the-supertitle">Title</div>
+      <div id="total-costamount">9.99</div>
+      <div class="-">empty normalize name class</div>
+    `;
+    const psl = `
+      title: @match("title") | text | trim
+      price: @match("price") | text | trim
+    `;
+    const result = execute(parse(psl), { html });
+    expect(result.title).toBe("Title");
+    expect(result.price).toBe("9.99");
+  });
+
+  it("should cover traversal pipes in executor", () => {
+    const html = `
+      <div class="card">
+        <h2>Header</h2>
+        <span class="price">10</span>
+        <span class="desc">Details</span>
+      </div>
+    `;
+    const psl = `
+      prev_el: "span.desc" | prev | text | trim
+      next_el: "h2" | next | text | trim
+      parent_el: "span.price" | parent | find("h2") | text | trim
+      children_el: ".card" | children | first | text | trim
+      closest_el: "span.price" | closest(".card") | find("h2") | text | trim
+      siblings_el: "span.price" | siblings | first | text | trim
+      html_content: ".card" | html
+      attr_val: "span.price" | attr("class")
+    `;
+    const result = execute(parse(psl), { html });
+    expect(result.prev_el).toBe("10");
+    expect(result.next_el).toBe("10");
+    expect(result.parent_el).toBe("Header");
+    expect(result.children_el).toBe("Header");
+    expect(result.closest_el).toBe("Header");
+    expect(result.siblings_el).toBe("Header");
+    expect(result.html_content).toContain("Header");
+    expect(result.attr_val).toBe("price");
+  });
+
+  it("should cover playwright debugger edge cases", async () => {
+    const pageObj = {
+      content: async () => `<html><body><h1>Hello</h1><div class="tags"><a>one</a></div></body></html>`,
+      url: () => ""
+    };
+    
+    await pipsel(pageObj).debug("title: 'h1' | parent | find('h1') | text");
+    
+    // empty selection, fallback/numeric args formatting, null description, and bool check
+    await pipsel(pageObj).debug("null_val: '.missing' | text | fallback('abc') | int | add(5)");
+    await pipsel(pageObj).debug("bool_val: '.missing' | text | fallback('abc') | int | bool");
+
+    const pslList = `
+      items[]: "h1" {
+        name: self | text
+      }
+    `;
+    await pipsel(pageObj).debug(pslList);
+
+    // debug traversal pipe on primitive list block
+    const pslPrim = `
+      tags[]: ".tags a" | parent | find("a") | text | trim
+    `;
+    await pipsel(pageObj).debug(pslPrim);
   });
 });
 

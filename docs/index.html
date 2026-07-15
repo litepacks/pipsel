@@ -80,15 +80,28 @@
       <p class="text-base sm:text-lg text-brand-muted max-w-2xl mt-2 leading-relaxed">
         Pipsel is a Node.js and TypeScript compiler toolchain for a custom HTML parsing DSL. Write declarative, hierarchical extraction selectors, parse, format, and lint them programmatically or in the CLI.
       </p>
+
+      <!-- Feature badges row -->
+      <div class="flex flex-wrap justify-center gap-3 mt-2 text-xs font-bold tracking-wide uppercase select-none">
+        <span class="bg-brand-success/15 border border-brand-success text-brand-success px-3 py-1 rounded-full flex items-center gap-1.5 shadow-md shadow-brand-success/5">
+          🛡️ 100% Code Coverage
+        </span>
+        <span class="bg-brand-primary/15 border border-brand-primary text-brand-primary px-3 py-1 rounded-full flex items-center gap-1.5 shadow-md shadow-brand-primary/5">
+          🎭 Playwright & Puppeteer Ready
+        </span>
+        <span class="bg-brand-accent/15 border border-brand-border text-brand-accent px-3 py-1 rounded-full flex items-center gap-1.5 shadow-md shadow-brand-accent/5">
+          v0.0.5 Release
+        </span>
+      </div>
       
-      <div class="flex items-center justify-between gap-4 bg-brand-card/80 border border-brand-border rounded-xl px-5 py-3.5 font-mono text-sm sm:text-base text-brand-accent max-w-md w-full mt-6 backdrop-blur-sm shadow-lg shadow-black/30">
+      <div class="flex items-center justify-between gap-4 bg-brand-card/80 border border-brand-border rounded-xl px-5 py-3.5 font-mono text-sm sm:text-base text-brand-accent max-w-md w-full mt-4 backdrop-blur-sm shadow-lg shadow-black/30">
         <span>$ npm install pipsel</span>
         <button id="copy-install-btn" title="Copy install command" class="text-brand-muted hover:text-brand-text transition-colors duration-200 bg-transparent border-0 cursor-pointer text-lg">📋</button>
       </div>
     </section>
 
     <!-- Highlighted Feature Cards -->
-    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 my-10 md:my-16">
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 my-10 md:my-16">
       <div class="bg-brand-card border border-brand-border p-6 rounded-2xl shadow-md transition-all duration-300 hover:border-brand-primary/40 hover:shadow-lg hover:shadow-brand-primary/5">
         <h3 class="text-lg font-bold text-brand-text mb-2.5 flex items-center gap-2">
           <span class="text-xl">⛓️</span> Unix Pipe Transformers
@@ -111,6 +124,14 @@
         </h3>
         <p class="text-brand-muted text-sm leading-relaxed">
           Catches duplicate keys, wrong arguments, unknown pipes, empty selectors, and invalid pipe order. Exposes a clean compiler API and CLI interface.
+        </p>
+      </div>
+      <div class="bg-brand-card border border-brand-border p-6 rounded-2xl shadow-md transition-all duration-300 hover:border-brand-primary/40 hover:shadow-lg hover:shadow-brand-primary/5">
+        <h3 class="text-lg font-bold text-brand-text mb-2.5 flex items-center gap-2">
+          <span class="text-xl">🤖</span> Browser Integration
+        </h3>
+        <p class="text-brand-muted text-sm leading-relaxed">
+          Integrates natively with Playwright & Puppeteer. Exposes the fluent <code>pipsel(page)</code> / <code>pipsel(locator)</code> API with visual diagnostic debugging.
         </p>
       </div>
     </section>
@@ -397,6 +418,31 @@
                     <td class="px-4 py-3 text-brand-text font-semibold"><code>filter(pattern)</code></td>
                     <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(pattern: string)</code></td>
                     <td class="px-4 py-3 text-brand-muted leading-relaxed">Filters array elements or checks strings against regex.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>unique(key)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(key?: string)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">De-duplicates arrays. Can filter object arrays using a target key.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>json_parse / json</code></td>
+                    <td class="px-4 py-3 text-brand-muted">None</td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Parses serialized JSON string content into a structured JavaScript object.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>required(message)</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(message?: string)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Throws a validation error if the field/list matches 0 elements or evaluates nullish.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>url_hostname / url_param</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(param?: string)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Parses active URL structures to extract hostname, protocol, origin, or search query parameters.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3 text-brand-text font-semibold"><code>&gt; / &lt; / &gt;= / &lt;= / == / !=</code></td>
+                    <td class="px-4 py-3 text-brand-muted"><code class="font-mono bg-[#090b0f] px-1.5 py-0.5 rounded text-brand-accent text-xs whitespace-normal break-all">(value: number | string)</code></td>
+                    <td class="px-4 py-3 text-brand-muted leading-relaxed">Evaluates numerical or string comparison checks directly inside pipe sequences.</td>
                   </tr>
                 </tbody>
               </table>

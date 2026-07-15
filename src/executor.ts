@@ -6,6 +6,23 @@ export interface ExecuteOptions {
   url?: string;
 }
 
+export interface BrowserPage {
+  content(): Promise<string>;
+  url(): string;
+}
+
+export async function executePlaywright(ast: Program, page: BrowserPage): Promise<any> {
+  const html = await page.content();
+  const url = page.url();
+  return execute(ast, { html, url });
+}
+
+export async function executePuppeteer(ast: Program, page: BrowserPage): Promise<any> {
+  const html = await page.content();
+  const url = page.url();
+  return execute(ast, { html, url });
+}
+
 export function execute(ast: Program, options: ExecuteOptions): any {
   const $ = cheerio.load(options.html);
   const context = {
@@ -54,7 +71,7 @@ function evaluateMeta(def: MetaDefinition, context: any): any {
   }
 }
 
-function resolveSource(source: SourceNode, scope: cheerio.Cheerio<any>, context: any): cheerio.Cheerio<any> | any {
+export function resolveSource(source: SourceNode, scope: cheerio.Cheerio<any>, context: any): cheerio.Cheerio<any> | any {
   switch (source.type) {
     case "Selector":
       return scope.find(source.value);
@@ -101,8 +118,9 @@ function isPresentSource(val: any): boolean {
 
 function evaluateField(def: FieldDefinition, scope: cheerio.Cheerio<any>, context: any): any {
   const sourceVal = resolveSource(def.source, scope, context);
+  const isCheerio = sourceVal && typeof sourceVal === "object" && "cheerio" in sourceVal;
 
-  if (def.source.type === "Meta") {
+  if (def.source.type === "Meta" || !isCheerio) {
     let value = sourceVal;
     for (let i = 0; i < def.pipes.length; i++) {
       const pipe = def.pipes[i];
@@ -179,7 +197,7 @@ function evaluateList(def: ListDefinition, scope: cheerio.Cheerio<any>, context:
       listResult.push(itemResult);
     });
   } else if (def.pipes && def.pipes.length > 0) {
-    const ARRAY_PIPES = ["unique"];
+    const ARRAY_PIPES = ["unique", "sum", "avg", "average", "min", "max"];
     const firstArrayPipeIdx = def.pipes.findIndex(p => ARRAY_PIPES.includes(p.name));
 
     if (firstArrayPipeIdx === -1) {
@@ -245,7 +263,7 @@ function evaluateList(def: ListDefinition, scope: cheerio.Cheerio<any>, context:
   return listResult;
 }
 
-function evaluatePipe(pipe: Pipe, currentValue: any, isSelection: boolean, context: any): any {
+export function evaluatePipe(pipe: Pipe, currentValue: any, isSelection: boolean, context: any): any {
   if (isSelection) {
     const el = currentValue as cheerio.Cheerio<any>;
     switch (pipe.name) {
@@ -294,10 +312,10 @@ function tryParseURL(val: any, context?: any): URL | null {
       return new URL(cleanVal, baseUrl);
     }
     return new URL(cleanVal);
-  } catch {
+  } catch (e) {
     try {
       return new URL(cleanVal);
-    } catch {
+    } catch (e) {
       return null;
     }
   }
@@ -385,7 +403,7 @@ function evaluateTransformer(pipe: Pipe, val: any, context?: any): any {
         const match = val.match(re);
         if (!match) return null;
         return match[1] !== undefined ? match[1] : match[0];
-      } catch {
+      } catch (e) {
         return null;
       }
     }
@@ -489,7 +507,7 @@ function evaluateTransformer(pipe: Pipe, val: any, context?: any): any {
           return val.filter(item => re.test(String(item)));
         }
         return re.test(String(val)) ? val : null;
-      } catch {
+      } catch (e) {
         return null;
       }
     }
@@ -572,7 +590,7 @@ function evaluateTransformer(pipe: Pipe, val: any, context?: any): any {
           return new URL(cleanVal, baseUrl).href;
         }
         return new URL(cleanVal).href;
-      } catch {
+      } catch (e) {
         return cleanVal;
       }
     }
@@ -602,7 +620,7 @@ function evaluateTransformer(pipe: Pipe, val: any, context?: any): any {
       if (val === null || val === undefined) return null;
       try {
         return JSON.parse(String(val).trim());
-      } catch {
+      } catch (e) {
         return null;
       }
     }
