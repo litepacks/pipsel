@@ -919,6 +919,174 @@ describe("URL Parse & Utility Pipes", () => {
     expect(result.bad_host).toBeNull();
     expect(result.bad_resolved).toBe("invalid_url");
   });
+});describe("Date Formatting & Parsing Pipes", () => {
+  it("should lint date format and parse pipes correctly", () => {
+    const validPsl = `
+      formatted_date: ".date" | text | date_format("yyyy-MM-dd")
+      parsed_date: ".date" | text | date_parse("dd/MM/yyyy")
+      parsed_date_ref: ".date" | text | date_parse("dd/MM/yyyy", "2026-01-01")
+      formatted_camel: ".date" | text | dateFormat("yyyy-MM-dd")
+      parsed_camel: ".date" | text | dateParse("dd/MM/yyyy")
+    `;
+    const diagnostics = lint(validPsl);
+    expect(diagnostics).toHaveLength(0);
+
+    const invalidPsl = `
+      err_format_args: ".date" | text | date_format
+      err_format_extra: ".date" | text | date_format("yyyy-MM-dd", "extra")
+      err_parse_args: ".date" | text | date_parse
+      err_parse_extra: ".date" | text | date_parse("dd/MM/yyyy", "2026", "extra")
+    `;
+    const invalidDiagnostics = lint(invalidPsl);
+    expect(invalidDiagnostics.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("should execute date_format and date_parse correctly", () => {
+    const psl = `
+      from_string: ".date1" | text | date_format("yyyy-MM-dd")
+      from_timestamp: ".date2" | text | date_format("yyyy-MM-dd")
+      parsed: ".date3" | text | date_parse("dd/MM/yyyy HH:mm") | date_format("yyyy-MM-dd HH:mm")
+      parsed_ref: ".date4" | text | date_parse("HH:mm", "2026-07-20") | date_format("yyyy-MM-dd HH:mm")
+      camel_format: ".date1" | text | dateFormat("yyyy-MM-dd")
+      camel_parse: ".date3" | text | dateParse("dd/MM/yyyy HH:mm") | dateFormat("yyyy-MM-dd HH:mm")
+    `;
+
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: `
+        <span class="date1">2026-07-20T12:34:56.789Z</span>
+        <span class="date2">1784550000000</span>
+        <span class="date3">20/07/2026 15:30</span>
+        <span class="date4">23:59</span>
+      `
+    });
+
+    expect(result.from_string).toBe("2026-07-20");
+    expect(result.from_timestamp).toBe("2026-07-20");
+    expect(result.parsed).toBe("2026-07-20 15:30");
+    expect(result.parsed_ref).toBe("2026-07-20 23:59");
+    expect(result.camel_format).toBe("2026-07-20");
+    expect(result.camel_parse).toBe("2026-07-20 15:30");
+  });
+
+  it("should handle invalid dates gracefully by returning null", () => {
+    const psl = `
+      bad_format: ".bad" | text | date_format("yyyy-MM-dd")
+      bad_parse: ".bad" | text | date_parse("yyyy-MM-dd")
+    `;
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: `<span class="bad">not a date</span>`
+    });
+
+    expect(result.bad_format).toBeNull();
+    expect(result.bad_parse).toBeNull();
+  });
+});
+
+describe("JSON-LD Extraction Pipes", () => {
+  it("should lint JSON-LD pipes correctly", () => {
+    const validPsl = `
+      ld1: "script" | json_ld
+      ld2: "script" | json_ld("Product")
+      ld3: "script" | jsonLd
+      ld4: "script" | jsonLd("Recipe")
+    `;
+    const diagnostics = lint(validPsl);
+    expect(diagnostics).toHaveLength(0);
+
+    const invalidPsl = `
+      err_ld: "script" | json_ld("Product", "extra")
+      err_ld_camel: "script" | jsonLd("Recipe", "extra")
+    `;
+    const invalidDiagnostics = lint(invalidPsl);
+    expect(invalidDiagnostics.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("should execute json_ld and jsonLd correctly on selections", () => {
+    const psl = `
+      all_ld: self | json_ld
+      product_ld: self | json_ld("Product")
+      recipe_ld: self | json_ld("Recipe")
+      missing_ld: self | json_ld("Organization")
+      camel_ld: self | jsonLd("Product")
+    `;
+
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: `
+        <div>
+          <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "name": "Super Widget"
+            }
+          </script>
+          <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "Recipe",
+                  "name": "Apple Pie"
+                },
+                {
+                  "@type": "Review",
+                  "reviewRating": 5
+                }
+              ]
+            }
+          </script>
+        </div>
+      `
+    });
+
+    expect(result.product_ld).toEqual({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "Super Widget"
+    });
+    expect(result.recipe_ld).toEqual({
+      "@type": "Recipe",
+      "name": "Apple Pie"
+    });
+    expect(result.camel_ld).toEqual({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "Super Widget"
+    });
+    expect(result.missing_ld).toBeNull();
+    expect(result.all_ld).toHaveLength(3);
+    expect(result.all_ld[0].name).toBe("Super Widget");
+    expect(result.all_ld[1].name).toBe("Apple Pie");
+    expect(result.all_ld[2].reviewRating).toBe(5);
+  });
+
+  it("should execute json_ld on string values", () => {
+    const psl = `
+      from_string: "script" | text | json_ld("Product")
+    `;
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: `<script>{ "@type": "Product", "name": "Direct JSON String" }</script>`
+    });
+    expect(result.from_string).toEqual({
+      "@type": "Product",
+      "name": "Direct JSON String"
+    });
+  });
+
+  it("should handle invalid JSON-LD gracefully by returning null", () => {
+    const psl = `
+      bad_ld: self | json_ld
+    `;
+    const ast = parse(psl);
+    const result = execute(ast, {
+      html: `<script type="application/ld+json">{ invalid json }</script>`
+    });
+    expect(result.bad_ld).toBeNull();
+  });
 });
 
 describe("Array & JSON Utility Pipes", () => {

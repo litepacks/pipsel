@@ -4,6 +4,7 @@ import { parse } from "./parser.js";
 import { execute, evaluatePipe, resolveSource } from "./executor.js";
 import { explain, getSourceLabel } from "./explain.js";
 import { Program, Definition, FieldDefinition, ListDefinition, Pipe, SourceNode } from "./types.js";
+import { discoverHTML, DiscoverOptions, DiscoverResult } from "./discover.js";
 
 // Helper to resolve PSL source from file or inline string
 function getSource(sourceOrFile: string): string {
@@ -119,6 +120,45 @@ export interface PipselRunner<R> {
   run<T = any>(source: string): Promise<R extends any[] ? T[] : T>;
   explain(sourceOrFile: string): Promise<string>;
   debug(sourceOrFile: string): Promise<string>;
+  discover(options: DiscoverOptions): Promise<DiscoverResult>;
+}
+
+class PipselHtmlRunner implements PipselRunner<any> {
+  constructor(private html: string) {}
+
+  async extract<T = any>(file: string): Promise<T> {
+    const source = getSource(file);
+    return this.run<T>(source);
+  }
+
+  async run<T = any>(source: string): Promise<T> {
+    const ast = parse(source);
+    return execute(ast, { html: this.html });
+  }
+
+  async explain(sourceOrFile: string): Promise<string> {
+    const source = getSource(sourceOrFile);
+    const ast = parse(source);
+    const tree = explain(ast);
+    console.log(tree);
+    return tree;
+  }
+
+  async debug(sourceOrFile: string): Promise<string> {
+    const source = getSource(sourceOrFile);
+    const ast = parse(source);
+    const $ = cheerio.load(this.html);
+    const context = { $, url: "", timestamp: Date.now() };
+    const logs: string[] = [];
+    evaluateScopeDebug(ast.body, $.root(), context, logs);
+    const logOutput = logs.join("\n").trim();
+    console.log(logOutput);
+    return logOutput;
+  }
+
+  async discover(options: DiscoverOptions): Promise<DiscoverResult> {
+    return discoverHTML(this.html, options);
+  }
 }
 
 class PipselPageRunner implements PipselRunner<any> {
@@ -156,6 +196,11 @@ class PipselPageRunner implements PipselRunner<any> {
     const logOutput = logs.join("\n").trim();
     console.log(logOutput);
     return logOutput;
+  }
+
+  async discover(options: DiscoverOptions): Promise<DiscoverResult> {
+    const html = await this.page.content();
+    return discoverHTML(html, options);
   }
 }
 
@@ -203,6 +248,12 @@ class PipselLocatorRunner implements PipselRunner<any[]> {
     console.log(logOutput);
     return logOutput;
   }
+
+  async discover(options: DiscoverOptions): Promise<DiscoverResult> {
+    const htmls: string[] = await this.locator.evaluateAll((els: any[]) => els.map(el => el.outerHTML));
+    const html = htmls.join("\n");
+    return discoverHTML(html, options);
+  }
 }
 
 class PipselElementHandleRunner implements PipselRunner<any> {
@@ -238,6 +289,11 @@ class PipselElementHandleRunner implements PipselRunner<any> {
     const logOutput = logs.join("\n").trim();
     console.log(logOutput);
     return logOutput;
+  }
+
+  async discover(options: DiscoverOptions): Promise<DiscoverResult> {
+    const html = await this.element.evaluate((el: any) => el.outerHTML);
+    return discoverHTML(html, options);
   }
 }
 
@@ -285,13 +341,26 @@ class PipselCollectionRunner implements PipselRunner<any[]> {
     console.log(logOutput);
     return logOutput;
   }
+
+  async discover(options: DiscoverOptions): Promise<DiscoverResult> {
+    const htmls: string[] = await Promise.all(
+      this.elements.map(el => el.evaluate((node: any) => node.outerHTML))
+    );
+    const html = htmls.join("\n");
+    return discoverHTML(html, options);
+  }
 }
 
+export function pipsel(html: string): PipselRunner<any>;
 export function pipsel(page: any): PipselRunner<any>;
 export function pipsel(locator: any): PipselRunner<any[]>;
 export function pipsel(target: any): PipselRunner<any> | PipselRunner<any[]> {
   if (!target) {
     throw new Error("pipsel: target is required");
+  }
+
+  if (typeof target === "string") {
+    return new PipselHtmlRunner(target);
   }
 
   if (Array.isArray(target)) {
@@ -310,5 +379,5 @@ export function pipsel(target: any): PipselRunner<any> | PipselRunner<any[]> {
     return new PipselPageRunner(target);
   }
 
-  throw new Error("pipsel: target must be a Playwright Page/Locator or Puppeteer Page/ElementHandle");
+  throw new Error("pipsel: target must be a Playwright Page/Locator or Puppeteer Page/ElementHandle, or a string (HTML)");
 }

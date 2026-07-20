@@ -1,6 +1,6 @@
 {
   "name": "pipsel",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "TypeScript DSL for extracting structured data from HTML",
   "type": "module",
   "main": "./dist/index.js",
@@ -23,6 +23,7 @@
   "dependencies": {
     "cheerio": "^1.2.0",
     "commander": "^12.1.0",
+    "date-fns": "^4.4.0",
     "glob": "^13.0.6"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { Program, Definition, FieldDefinition, ListDefinition, MetaDefinition, Pipe, SourceNode } from "./types.js";
+import { format as dateFnsFormat, parse as dateFnsParse } from "date-fns";
 
 export interface ExecuteOptions {
   html: string;
@@ -295,6 +296,38 @@ export function evaluatePipe(pipe: Pipe, currentValue: any, isSelection: boolean
         const attrName = pipe.args[0]?.value as string;
         return el.attr(attrName) || null;
       }
+      case "json_ld":
+      case "jsonLd": {
+        let scripts: cheerio.Cheerio<any>;
+        if (el.is('script[type="application/ld+json"]')) {
+          scripts = el;
+        } else {
+          scripts = el.find('script[type="application/ld+json"]');
+        }
+
+        const objects: any[] = [];
+        scripts.each((_, scriptEl) => {
+          const text = context.$(scriptEl).text().trim();
+          if (text) {
+            try {
+              const parsed = JSON.parse(text);
+              if (Array.isArray(parsed)) {
+                objects.push(...parsed);
+              } else if (parsed && typeof parsed === "object") {
+                if (Array.isArray(parsed["@graph"])) {
+                  objects.push(...parsed["@graph"]);
+                } else {
+                  objects.push(parsed);
+                }
+              }
+            } catch (e) {
+              // Ignore invalid JSON-LD blocks
+            }
+          }
+        });
+
+        return filterJsonLdObjects(objects, pipe.args[0]?.value as string);
+      }
       default:
         // default text converter + transformer evaluation
         return evaluateTransformer(pipe, el.text(), context);
@@ -319,6 +352,25 @@ function tryParseURL(val: any, context?: any): URL | null {
       return null;
     }
   }
+}
+
+function filterJsonLdObjects(objects: any[], typePattern?: string): any {
+  if (typePattern) {
+    const cleanPattern = typePattern.trim().toLowerCase();
+    const matched = objects.filter(obj => {
+      if (obj && typeof obj === "object" && obj["@type"]) {
+        const types = Array.isArray(obj["@type"]) ? obj["@type"] : [obj["@type"]];
+        return types.some((t: any) => String(t).trim().toLowerCase() === cleanPattern);
+      }
+      return false;
+    });
+
+    if (matched.length === 0) return null;
+    return matched.length === 1 ? matched[0] : matched;
+  }
+
+  if (objects.length === 0) return null;
+  return objects.length === 1 ? objects[0] : objects;
 }
 
 function evaluateTransformer(pipe: Pipe, val: any, context?: any): any {
@@ -648,6 +700,80 @@ function evaluateTransformer(pipe: Pipe, val: any, context?: any): any {
     case "!=": {
       const right = pipe.args[0].value;
       return compare(val, right) !== 0;
+    }
+    case "date_format":
+    case "dateFormat": {
+      if (val === null || val === undefined) return null;
+      let date: Date;
+      if (val instanceof Date) {
+        date = val;
+      } else if (typeof val === "number") {
+        date = new Date(val);
+      } else {
+        const str = String(val).trim();
+        if (/^\d+$/.test(str)) {
+          date = new Date(Number(str));
+        } else {
+          date = new Date(str);
+        }
+      }
+
+      if (isNaN(date.getTime())) return null;
+
+      const formatString = pipe.args[0]?.value as string;
+      if (!formatString) return null;
+
+      try {
+        return dateFnsFormat(date, formatString);
+      } catch (e) {
+        return null;
+      }
+    }
+    case "date_parse":
+    case "dateParse": {
+      if (val === null || val === undefined) return null;
+      const str = String(val).trim();
+      const formatString = pipe.args[0]?.value as string;
+      if (!formatString) return null;
+
+      let refDate: Date;
+      const refArg = pipe.args[1]?.value;
+      if (refArg) {
+        refDate = new Date(String(refArg).trim());
+        if (isNaN(refDate.getTime())) {
+          refDate = new Date(context?.timestamp || Date.now());
+        }
+      } else {
+        refDate = new Date(context?.timestamp || Date.now());
+      }
+
+      try {
+        const parsedDate = dateFnsParse(str, formatString, refDate);
+        if (isNaN(parsedDate.getTime())) return null;
+        return parsedDate;
+      } catch (e) {
+        return null;
+      }
+    }
+    case "json_ld":
+    case "jsonLd": {
+      if (val === null || val === undefined) return null;
+      const objects: any[] = [];
+      try {
+        const parsed = typeof val === "string" ? JSON.parse(val.trim()) : val;
+        if (Array.isArray(parsed)) {
+          objects.push(...parsed);
+        } else if (parsed && typeof parsed === "object") {
+          if (Array.isArray(parsed["@graph"])) {
+            objects.push(...parsed["@graph"]);
+          } else {
+            objects.push(parsed);
+          }
+        }
+      } catch (e) {
+        return null;
+      }
+      return filterJsonLdObjects(objects, pipe.args[0]?.value as string);
     }
     default:
       return val;

@@ -138,6 +138,9 @@ The engine deterministically scores DOM elements looking for matches in `id`, `c
 | `url_resolve` / `urlResolve` / `url_join` / `urlJoin` | `(base?: string)` | Resolve a relative URL against a base URL (defaults to context `@url`). |
 | `unique` | `(key?: string)` | Retain unique values in an array. For primitive arrays, uses Set. For object arrays, checks uniqueness by the specified `key`. |
 | `json_parse` / `jsonParse` / `json` | None | Parse a JSON string into a structured JavaScript object or array. |
+| `date_format` / `dateFormat` | `(format: string)` | Format a date string, timestamp, or Date object using the specified pattern (e.g., `"yyyy-MM-dd"`). Returns `null` on failure. |
+| `date_parse` / `dateParse` | `(format: string, reference?: string)` | Parse a custom date string using the specified format. The optional reference date string resolves missing components (defaults to the execution timestamp). Returns `null` on failure. |
+| `json_ld` / `jsonLd` | `(type?: string)` | Extract and parse JSON-LD structured data from `<script type="application/ld+json">` elements. If the optional type argument is provided (e.g. `"Product"`), filters the extracted objects by `@type`. Returns `null` on failure. |
 | `>`, `<`, `>=`, `<=`, `==`, `=`, `!=` | `(value: any)` | Compare the pipeline value against the argument (numerically or lexically). Returns a boolean. |
 | `required` | `(message?: string)` | Throw a runtime validation error if the pipeline value is null, undefined, empty string, or an empty list. Supports custom error message. |
 
@@ -236,6 +239,97 @@ console.log(result);
 
 await browser.close();
 ```
+
+---
+
+## Discover API (AI-Assisted PSL Generation)
+
+Pipsel features a deterministic, token-optimized **Discover** engine to compile initial draft PSL scripts from HTML documents via a provider-agnostic LLM interface. The HTML is cleaned, compressed, chunked, and parsed on the client-side before any LLM calls are made. LLM output is then validated and automatically repaired.
+
+### Usage Example:
+```typescript
+import { pipsel } from "pipsel";
+
+// 1. Define a provider wrapper conforming to LLMProvider interface
+const provider = {
+  async call(prompt: string): Promise<string> {
+    const response = await yourLLMClient.createCompletion({
+      model: "gpt-4",
+      prompt: prompt,
+    });
+    return response.text;
+  }
+};
+
+// 2. Discover PSL from an HTML string or a browser page
+const result = await pipsel(html).discover({
+  fields: ["title", "price", "image", "url"],
+  provider,
+  onProgress: (status) => console.log(status)
+});
+
+console.log(result.psl);             // Generated, linted & validated PSL
+console.log(result.preview);         // Extracted data preview
+console.log(result.confidence);      // Heuristic confidence score [0.0 - 1.0]
+console.log(result.diagnostics);     // Individual selector health reports
+```
+
+### Provider Integrations
+
+You can write custom provider adapters for any LLM API. Here are examples for **Gemini**, **OpenAI**, and **DeepSeek**:
+
+#### Gemini (Google Gen AI SDK)
+```typescript
+import { GoogleGenAI } from "@google/genai";
+
+const gemini = new GoogleGenAI({ apiKey: "YOUR_API_KEY" });
+const provider = {
+  async call(prompt: string): Promise<string> {
+    const response = await gemini.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt
+    });
+    return response.text || "";
+  }
+};
+```
+
+#### OpenAI SDK
+```typescript
+import OpenAI from "openai";
+
+const openai = new OpenAI({ apiKey: "YOUR_API_KEY" });
+const provider = {
+  async call(prompt: string): Promise<string> {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }]
+    });
+    return response.choices[0].message.content || "";
+  }
+};
+```
+
+#### DeepSeek API
+```typescript
+import OpenAI from "openai"; // DeepSeek uses the OpenAI SDK compatible endpoint
+
+const deepseek = new OpenAI({
+  baseURL: "https://api.deepseek.com",
+  apiKey: "YOUR_API_KEY"
+});
+const provider = {
+  async call(prompt: string): Promise<string> {
+    const response = await deepseek.chat.completions.create({
+      model: "deepseek-chat",
+      messages: [{ role: "user", content: prompt }]
+    });
+    return response.choices[0].message.content || "";
+  }
+};
+```
+
+For more details, advanced configurations, and Anthropic Claude provider examples, see [docs/discover.md](file:///Users/ahmet/projects/pipsel/docs/discover.md).
 
 ---
 

@@ -97,6 +97,12 @@ const BUILT_IN_PIPES = {
   "=": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
   "!=": { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
   required: { minArgs: 0, maxArgs: 1, isExtractor: false, isTraversal: false },
+  date_format: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  dateFormat: { minArgs: 1, maxArgs: 1, isExtractor: false, isTraversal: false },
+  date_parse: { minArgs: 1, maxArgs: 2, isExtractor: false, isTraversal: false },
+  dateParse: { minArgs: 1, maxArgs: 2, isExtractor: false, isTraversal: false },
+  json_ld: { minArgs: 0, maxArgs: 1, isExtractor: true, isTraversal: false },
+  jsonLd: { minArgs: 0, maxArgs: 1, isExtractor: true, isTraversal: false },
 };
 
 const ALLOWED_METAS = ["@url", "@timestamp", "@paginate"];

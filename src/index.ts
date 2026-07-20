@@ -4,4 +4,5 @@ export { lint } from "./linter.js";
 export { execute, ExecuteOptions, executePlaywright, executePuppeteer, BrowserPage } from "./executor.js";
 export { explain } from "./explain.js";
 export { pipsel, PipselRunner } from "./playwright.js";
+export { LLMProvider, DiscoverOptions, DiscoverResult, SelectorDiagnostic } from "./discover.js";
 export * from "./types.js";
